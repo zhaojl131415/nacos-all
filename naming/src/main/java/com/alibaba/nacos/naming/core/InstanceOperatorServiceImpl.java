@@ -109,7 +109,14 @@ public class InstanceOperatorServiceImpl implements InstanceOperator {
         this.instanceUpgradeHelper = instanceUpgradeHelper;
         this.selectorManager = selectorManager;
     }
-    
+
+    /**
+     * 注册实例
+     * @param namespaceId id of namespace
+     * @param serviceName grouped service name group@@service
+     * @param instance    instance to register
+     * @throws NacosException
+     */
     @Override
     public void registerInstance(String namespaceId, String serviceName, Instance instance) throws NacosException {
         com.alibaba.nacos.naming.core.Instance coreInstance = parseInstance(instance);

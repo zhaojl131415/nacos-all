@@ -351,6 +351,7 @@ public class Service extends com.alibaba.nacos.api.naming.pojo.Service implement
     }
     
     /**
+     * 获取所有短暂或一致性的实例。
      * Get all instance of ephemeral or consistency.
      *
      * @param ephemeral whether ephemeral instance

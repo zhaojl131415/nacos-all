@@ -44,7 +44,13 @@ public class KeyBuilder {
     public static final String RESOURCE_KEY_SNAPSHOT = "snapshot";
     
     public static final String RESOURCE_KEY_CHECKSUM = "checksum";
-    
+
+    /**
+     * 构建临时实例列表键
+     * @param namespaceId
+     * @param serviceName
+     * @return
+     */
     private static String buildEphemeralInstanceListKey(String namespaceId, String serviceName) {
         return INSTANCE_LIST_KEY_PREFIX + EPHEMERAL_KEY_PREFIX + namespaceId + NAMESPACE_KEY_CONNECTOR + serviceName;
     }
@@ -54,6 +60,7 @@ public class KeyBuilder {
     }
     
     public static String buildInstanceListKey(String namespaceId, String serviceName, boolean ephemeral) {
+        // 判断是否为临时实例, 默认为true
         return ephemeral ? buildEphemeralInstanceListKey(namespaceId, serviceName)
                 : buildPersistentInstanceListKey(namespaceId, serviceName);
     }
@@ -65,7 +72,12 @@ public class KeyBuilder {
     public static String  getSwitchDomainKey() {
         return SERVICE_META_KEY_PREFIX + UtilsAndCommons.SWITCH_DOMAIN_NAME;
     }
-    
+
+    /**
+     * 匹配key是否已临时实例开头
+     * @param key
+     * @return
+     */
     public static boolean matchEphemeralInstanceListKey(String key) {
         return key.startsWith(INSTANCE_LIST_KEY_PREFIX + EPHEMERAL_KEY_PREFIX);
     }

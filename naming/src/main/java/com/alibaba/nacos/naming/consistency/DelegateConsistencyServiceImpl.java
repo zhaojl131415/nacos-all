@@ -18,6 +18,7 @@ package com.alibaba.nacos.naming.consistency;
 
 import com.alibaba.nacos.api.exception.NacosException;
 import com.alibaba.nacos.naming.consistency.ephemeral.EphemeralConsistencyService;
+import com.alibaba.nacos.naming.consistency.ephemeral.distro.DistroConsistencyServiceImpl;
 import com.alibaba.nacos.naming.consistency.persistent.PersistentConsistencyServiceDelegateImpl;
 import com.alibaba.nacos.naming.pojo.Record;
 import org.springframework.context.annotation.DependsOn;
@@ -47,6 +48,15 @@ public class DelegateConsistencyServiceImpl implements ConsistencyService {
     
     @Override
     public void put(String key, Record value) throws NacosException {
+        /**
+         * 根据key判断是否为临时实例, 获取对应的实现
+         *
+         * 临时实例: (默认)
+         * @see DistroConsistencyServiceImpl#put(java.lang.String, com.alibaba.nacos.naming.pojo.Record)
+         *
+         * 持久实例:
+         * @see PersistentConsistencyServiceDelegateImpl#put(java.lang.String, com.alibaba.nacos.naming.pojo.Record)
+         */
         mapConsistencyService(key).put(key, value);
     }
     
@@ -103,6 +113,7 @@ public class DelegateConsistencyServiceImpl implements ConsistencyService {
     }
     
     private ConsistencyService mapConsistencyService(String key) {
+        // 根据是否为临时实例, 获取对应的service
         return KeyBuilder.matchEphemeralKey(key) ? ephemeralConsistencyService : persistentConsistencyService;
     }
 }

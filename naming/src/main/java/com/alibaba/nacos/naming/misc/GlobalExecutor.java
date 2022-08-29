@@ -273,6 +273,7 @@ public class GlobalExecutor {
     
     public static ScheduledFuture<?> scheduleNamingHealth(Runnable command, long initialDelay, long delay,
             TimeUnit unit) {
+        // 线程池延时任务
         return NAMING_HEALTH_EXECUTOR.scheduleWithFixedDelay(command, initialDelay, delay, unit);
     }
     

@@ -116,10 +116,18 @@ public class InstanceController {
         // 服务名
         final String serviceName = WebUtils.required(request, CommonParams.SERVICE_NAME);
         NamingUtils.checkServiceNameFormat(serviceName);
-        
+        // 从request请求中构建服务实例
         final Instance instance = HttpRequestInstanceBuilder.newBuilder()
                 .setDefaultInstanceEphemeral(switchDomain.isDefaultInstanceEphemeral()).setRequest(request).build();
-        // 服务注册
+        /**
+         * 服务注册
+         *
+         * 服务端:
+         * @see InstanceOperatorServiceImpl#registerInstance(java.lang.String, java.lang.String, com.alibaba.nacos.api.naming.pojo.Instance)
+         *
+         * 客户端:
+         * @see InstanceOperatorClientImpl#registerInstance(java.lang.String, java.lang.String, com.alibaba.nacos.api.naming.pojo.Instance)
+         */
         getInstanceOperator().registerInstance(namespaceId, serviceName, instance);
         NotifyCenter.publishEvent(new RegisterInstanceTraceEvent(System.currentTimeMillis(), "",
                 false, namespaceId, NamingUtils.getGroupName(serviceName), NamingUtils.getServiceName(serviceName),
@@ -128,7 +136,7 @@ public class InstanceController {
     }
     
     /**
-     * Deregister instances.
+     * Deregister instances. 服务剔除
      *
      * @param request http request
      * @return 'ok' if success
@@ -248,7 +256,7 @@ public class InstanceController {
         }
         return new InstanceOperationInfo(serviceName, consistencyType, instances);
     }
-    
+
     private List<Instance> parseBatchInstances(String instances) {
         try {
             return JacksonUtils.toObj(instances, new TypeReference<List<Instance>>() {

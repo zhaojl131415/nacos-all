@@ -160,6 +160,7 @@ public class NamingHttpClientProxy extends AbstractNamingClientProxy {
         params.put(WEIGHT_PARAM, String.valueOf(instance.getWeight()));
         params.put(REGISTER_ENABLE_PARAM, String.valueOf(instance.isEnabled()));
         params.put(HEALTHY_PARAM, String.valueOf(instance.isHealthy()));
+        // 默认临时实例
         params.put(EPHEMERAL_PARAM, String.valueOf(instance.isEphemeral()));
         params.put(META_PARAM, JacksonUtils.toJson(instance.getMetadata()));
 

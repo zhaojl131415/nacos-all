@@ -80,7 +80,10 @@ public class ClientBeatCheckTask implements BeatCheckTask {
     public String taskKey() {
         return KeyBuilder.buildServiceMetaKey(service.getNamespaceId(), service.getName());
     }
-    
+
+    /**
+     * 延时任务执行
+     */
     @Override
     public void run() {
         try {

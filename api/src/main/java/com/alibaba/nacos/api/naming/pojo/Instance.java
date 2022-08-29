@@ -68,6 +68,7 @@ public class Instance implements Serializable {
     
     /**
      * If instance is ephemeral.
+     * 判断是否为临时服务: 默认为临时实例
      *
      * @since 1.0.0
      */
