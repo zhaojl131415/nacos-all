@@ -162,7 +162,8 @@ public class NamingHttpClientProxy extends AbstractNamingClientProxy {
         params.put(HEALTHY_PARAM, String.valueOf(instance.isHealthy()));
         params.put(EPHEMERAL_PARAM, String.valueOf(instance.isEphemeral()));
         params.put(META_PARAM, JacksonUtils.toJson(instance.getMetadata()));
-        
+
+        // 通过post方式发送注册实例的http请求
         reqApi(UtilAndComs.nacosUrlInstance, params, HttpMethod.POST);
         
     }
@@ -423,6 +424,9 @@ public class NamingHttpClientProxy extends AbstractNamingClientProxy {
             String nacosDomain = serverListManager.getNacosDomain();
             for (int i = 0; i < maxRetry; i++) {
                 try {
+                    /**
+                     * 核心代码:
+                     */
                     return callServer(api, params, body, nacosDomain, method);
                 } catch (NacosException e) {
                     exception = e;
@@ -488,6 +492,9 @@ public class NamingHttpClientProxy extends AbstractNamingClientProxy {
             url = NamingHttpClientManager.getInstance().getPrefix() + curServer + api;
         }
         try {
+            /**
+             * 底层调用HTTP发送请求
+             */
             HttpRestResult<String> restResult = nacosRestTemplate
                     .exchangeForm(url, header, Query.newInstance().initParams(params), body, method, String.class);
             end = System.currentTimeMillis();

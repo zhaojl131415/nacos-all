@@ -72,6 +72,7 @@ import static com.alibaba.nacos.naming.misc.UtilsAndCommons.DEFAULT_CLUSTER_NAME
 
 /**
  * Instance operation controller.
+ * 服务实例操作controller
  *
  * @author nkorange
  */
@@ -99,7 +100,7 @@ public class InstanceController {
     }
     
     /**
-     * Register new instance.
+     * Register new instance. 服务实例注册
      *
      * @param request http request
      * @return 'ok' if success
@@ -109,15 +110,16 @@ public class InstanceController {
     @PostMapping
     @Secured(action = ActionTypes.WRITE)
     public String register(HttpServletRequest request) throws Exception {
-        
+        // 服务命名空间id
         final String namespaceId = WebUtils
                 .optional(request, CommonParams.NAMESPACE_ID, Constants.DEFAULT_NAMESPACE_ID);
+        // 服务名
         final String serviceName = WebUtils.required(request, CommonParams.SERVICE_NAME);
         NamingUtils.checkServiceNameFormat(serviceName);
         
         final Instance instance = HttpRequestInstanceBuilder.newBuilder()
                 .setDefaultInstanceEphemeral(switchDomain.isDefaultInstanceEphemeral()).setRequest(request).build();
-        
+        // 服务注册
         getInstanceOperator().registerInstance(namespaceId, serviceName, instance);
         NotifyCenter.publishEvent(new RegisterInstanceTraceEvent(System.currentTimeMillis(), "",
                 false, namespaceId, NamingUtils.getGroupName(serviceName), NamingUtils.getServiceName(serviceName),

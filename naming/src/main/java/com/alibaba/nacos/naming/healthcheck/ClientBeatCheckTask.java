@@ -43,6 +43,7 @@ import java.util.List;
 import static com.alibaba.nacos.common.constant.RequestUrlConstants.HTTP_PREFIX;
 
 /**
+ * 客户端心跳检查任务
  * Client beat check task of service for version 1.x.
  *
  * @author nkorange
@@ -94,14 +95,16 @@ public class ClientBeatCheckTask implements BeatCheckTask {
             if (!getSwitchDomain().isHealthCheckEnabled()) {
                 return;
             }
-            
+            // 获取所有实例
             List<Instance> instances = service.allIPs(true);
             
-            // first set health status of instances:
+            // first set health status of instances: 遍历
             for (Instance instance : instances) {
+                // 如果 系统时间 - 实例最后的心跳时间 > 实例心跳超时时间(默认15s), 也就是说15s没有收到客户端的心跳续约
                 if (System.currentTimeMillis() - instance.getLastBeat() > instance.getInstanceHeartBeatTimeOut()) {
                     if (!instance.isMarked()) {
                         if (instance.isHealthy()) {
+                            // 将当前服务实例的健康状态设置为 false
                             instance.setHealthy(false);
                             Loggers.EVT_LOG
                                     .info("{POS} {IP-DISABLED} valid: {}:{}@{}@{}, region: {}, msg: client timeout after {}, last beat: {}",
@@ -124,11 +127,12 @@ public class ClientBeatCheckTask implements BeatCheckTask {
                 if (instance.isMarked()) {
                     continue;
                 }
-                
+                // 如果 系统时间 - 实例最后的心跳时间 > 移除服务实例超时时间(默认30s)
                 if (System.currentTimeMillis() - instance.getLastBeat() > instance.getIpDeleteTimeout()) {
                     // delete instance
                     Loggers.SRV_LOG.info("[AUTO-DELETE-IP] service: {}, ip: {}", service.getName(),
                             JacksonUtils.toJson(instance));
+                    // 移除服务实例
                     deleteIp(instance);
                 }
             }

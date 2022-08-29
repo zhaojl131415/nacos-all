@@ -34,7 +34,7 @@ import java.util.concurrent.TimeUnit;
  */
 @SuppressWarnings("PMD.ThreadPoolCreationRule")
 public class HealthCheckReactor {
-    
+
     private static Map<String, ScheduledFuture> futureMap = new ConcurrentHashMap<>();
     
     /**
@@ -65,6 +65,10 @@ public class HealthCheckReactor {
      * @param task client beat check task
      */
     public static void scheduleCheck(BeatCheckTask task) {
+        /**
+         * EXECUTOR.scheduleWithFixedDelay: 带延迟时间的调度，循环执行，固定延迟
+         * @see ClientBeatCheckTask#run()
+         */
         Runnable wrapperTask =
                 task instanceof NacosHealthCheckTask ? new HealthCheckTaskInterceptWrapper((NacosHealthCheckTask) task)
                         : task;

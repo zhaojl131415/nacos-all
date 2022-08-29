@@ -479,6 +479,10 @@ public class NacosRestTemplate extends AbstractNacosRestTemplate {
         ResponseHandler<T> responseHandler = super.selectResponseHandler(responseType);
         HttpClientResponse response = null;
         try {
+            /**
+             * 调用JDK封装的HTTP
+             * @see JdkHttpClientRequest#execute(java.net.URI, java.lang.String, com.alibaba.nacos.common.model.RequestHttpEntity)
+             */
             response = this.requestClient().execute(uri, httpMethod, requestEntity);
             return responseHandler.handle(response);
         } finally {

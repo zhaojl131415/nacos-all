@@ -118,7 +118,10 @@ public class GlobalExecutor {
     private static final ExecutorService TCP_CHECK_EXECUTOR = ExecutorFactory.Managed
             .newFixedExecutorService(ClassUtils.getCanonicalName(NamingApp.class), 2,
                     new NameThreadFactory("com.alibaba.nacos.naming.tcp.check.worker"));
-    
+    /**
+     * 命名空间健康检查线程池
+     * 延迟/周期执行线程池
+     */
     private static final ScheduledExecutorService NAMING_HEALTH_EXECUTOR = ExecutorFactory.Managed
             .newScheduledExecutorService(ClassUtils.getCanonicalName(NamingApp.class),
                     Integer.max(Integer.getInteger("com.alibaba.nacos.naming.health.thread.num", DEFAULT_THREAD_COUNT),

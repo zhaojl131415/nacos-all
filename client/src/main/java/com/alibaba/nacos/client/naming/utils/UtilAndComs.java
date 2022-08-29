@@ -33,7 +33,8 @@ public class UtilAndComs {
     public static String webContext = "/nacos";
     
     public static String nacosUrlBase = webContext + "/v1/ns";
-    
+
+    /** 实例注册 */
     public static String nacosUrlInstance = nacosUrlBase + "/instance";
     
     public static String nacosUrlService = nacosUrlBase + "/service";

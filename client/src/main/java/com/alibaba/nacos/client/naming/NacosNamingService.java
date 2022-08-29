@@ -32,6 +32,8 @@ import com.alibaba.nacos.client.naming.event.InstancesChangeEvent;
 import com.alibaba.nacos.client.naming.event.InstancesChangeNotifier;
 import com.alibaba.nacos.client.naming.remote.NamingClientProxy;
 import com.alibaba.nacos.client.naming.remote.NamingClientProxyDelegate;
+import com.alibaba.nacos.client.naming.remote.gprc.NamingGrpcClientProxy;
+import com.alibaba.nacos.client.naming.remote.http.NamingHttpClientProxy;
 import com.alibaba.nacos.client.naming.utils.CollectionUtils;
 import com.alibaba.nacos.client.naming.utils.InitUtils;
 import com.alibaba.nacos.client.naming.utils.UtilAndComs;
@@ -146,6 +148,12 @@ public class NacosNamingService implements NamingService {
     @Override
     public void registerInstance(String serviceName, String groupName, Instance instance) throws NacosException {
         NamingUtils.checkInstanceIsLegal(instance);
+        /**
+         * Grpc:
+         * @see NamingGrpcClientProxy#registerService(java.lang.String, java.lang.String, com.alibaba.nacos.api.naming.pojo.Instance)
+         * Http:
+         * @see NamingHttpClientProxy#registerService(java.lang.String, java.lang.String, com.alibaba.nacos.api.naming.pojo.Instance)
+         */
         clientProxy.registerService(serviceName, groupName, instance);
     }
     

@@ -79,6 +79,8 @@ import static com.alibaba.nacos.naming.misc.UtilsAndCommons.UPDATE_INSTANCE_META
 public class ServiceManager implements RecordListener<Service> {
     
     /**
+     * 服务缓存: 环境隔离/分组隔离的原理
+     * Map<命名空间Id, Map<分组ID+服务名, 服务实例>>
      * Map(namespace, Map(group::serviceName, Service)).
      */
     private final Map<String, Map<String, Service>> serviceMap = new ConcurrentHashMap<>();
@@ -445,12 +447,13 @@ public class ServiceManager implements RecordListener<Service> {
      */
     public void createServiceIfAbsent(String namespaceId, String serviceName, boolean local, Cluster cluster)
             throws NacosException {
+        // 根据 命名空间Id 和 服务名 获取服务
         Service service = getService(namespaceId, serviceName);
         //return if service already exists
         if (service != null) {
             return;
         }
-
+        // 如果服务不存在, 即没注册, 则实例化一个
         Loggers.SRV_LOG.info("creating empty service {}:{}", namespaceId, serviceName);
         service = new Service();
         service.setName(serviceName);
@@ -464,7 +467,9 @@ public class ServiceManager implements RecordListener<Service> {
             service.getClusterMap().put(cluster.getName(), cluster);
         }
         service.validate();
-
+        /**
+         * 将服务put到{@link #serviceMap}中, 并完成初始化
+         */
         putServiceAndInit(service);
         if (!local) {
             addOrReplaceService(service);
@@ -855,22 +860,35 @@ public class ServiceManager implements RecordListener<Service> {
     public boolean containService(String namespaceId, String serviceName) {
         return getService(namespaceId, serviceName) != null;
     }
-    
+
     /**
      * Put service into manager.
+     * 将服务put到{@link #serviceMap}中
      *
      * @param service service
+     *
+     *
      */
     public void putService(Service service) {
+        // 判断 serviceMap 中是否存在 命名空间id
         if (!serviceMap.containsKey(service.getNamespaceId())) {
+            // 如果不存在, 则初始化一个, 在早期的版本中, 这里用的是synchronized + DCL(双重检验所)实现
             serviceMap.putIfAbsent(service.getNamespaceId(), new ConcurrentSkipListMap<>());
         }
+        // 根据 命名空间id put 服务实例信息到缓存中
         serviceMap.get(service.getNamespaceId()).putIfAbsent(service.getName(), service);
     }
-    
+
+    /**
+     * 将服务put到{@link #serviceMap}中, 并完成初始化
+     * @param service
+     * @throws NacosException
+     */
     private void putServiceAndInit(Service service) throws NacosException {
+        // 将服务put到serviceMap中
         putService(service);
         service = getService(service.getNamespaceId(), service.getName());
+        // 初始化
         service.init();
         consistencyService
                 .listen(KeyBuilder.buildInstanceListKey(service.getNamespaceId(), service.getName(), true), service);

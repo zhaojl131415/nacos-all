@@ -216,12 +216,14 @@ public class Instance implements Serializable {
         return getMetaDataByKeyWithDefault(PreservedMetadataKeys.HEART_BEAT_INTERVAL,
                 Constants.DEFAULT_HEART_BEAT_INTERVAL);
     }
-    
+
+    /** 获取实例心跳超时时间: 默认15s */
     public long getInstanceHeartBeatTimeOut() {
         return getMetaDataByKeyWithDefault(PreservedMetadataKeys.HEART_BEAT_TIMEOUT,
                 Constants.DEFAULT_HEART_BEAT_TIMEOUT);
     }
-    
+
+    /** 获取移除服务超时时间(默认30s) */
     public long getIpDeleteTimeout() {
         return getMetaDataByKeyWithDefault(PreservedMetadataKeys.IP_DELETE_TIMEOUT,
                 Constants.DEFAULT_IP_DELETE_TIMEOUT);
