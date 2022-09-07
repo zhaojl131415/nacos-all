@@ -75,7 +75,7 @@ public class Instance implements Serializable {
     private boolean ephemeral = true;
     
     /**
-     * cluster information of instance.
+     * cluster information of instance.实例的集群信息。
      */
     private String clusterName;
     

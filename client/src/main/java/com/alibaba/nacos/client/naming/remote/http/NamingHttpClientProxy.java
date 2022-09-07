@@ -426,7 +426,11 @@ public class NamingHttpClientProxy extends AbstractNamingClientProxy {
             for (int i = 0; i < maxRetry; i++) {
                 try {
                     /**
-                     * 核心代码:
+                     * 核心代码: 往服务端发送http请求
+                     * 这里发起请求之后, 就可以去服务端查看接收服务请求的处理
+                     *
+                     * @see com.alibaba.nacos.naming.controllers.InstanceController#register(javax.servlet.http.HttpServletRequest)
+                     *
                      */
                     return callServer(api, params, body, nacosDomain, method);
                 } catch (NacosException e) {

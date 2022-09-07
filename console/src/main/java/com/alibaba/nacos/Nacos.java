@@ -16,13 +16,26 @@
 
 package com.alibaba.nacos;
 
+import com.alibaba.nacos.api.naming.pojo.Instance;
+import com.alibaba.nacos.api.naming.remote.request.InstanceRequest;
+import com.alibaba.nacos.api.remote.request.RequestMeta;
+import com.alibaba.nacos.client.naming.NacosNamingService;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.web.servlet.ServletComponentScan;
 import org.springframework.scheduling.annotation.EnableScheduling;
 
 /**
- * Nacos starter.
+ * Nacos starter.服务端启动
+ *
+ * 微服务启动, 客户端注册实例
+ * @see NacosNamingService#registerInstance(String, String, Instance)
+ *
+ * 服务端接收客户端注册请求
+ * gRPC:
+ * @see com.alibaba.nacos.naming.remote.rpc.handler.InstanceRequestHandler#handle(InstanceRequest, RequestMeta)
+ * Http:
+ * @see com.alibaba.nacos.naming.controllers.InstanceController#register(javax.servlet.http.HttpServletRequest)
  *
  * @author nacos
  */

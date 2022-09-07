@@ -132,6 +132,7 @@ public class NacosNamingService implements NamingService {
     @Override
     public void registerInstance(String serviceName, String groupName, String ip, int port, String clusterName)
             throws NacosException {
+        // 封装实例对象, 指定了ip/端口/权重/集群名, 并未指定是否为临时实例, 所以默认为临时实例
         Instance instance = new Instance();
         instance.setIp(ip);
         instance.setPort(port);
@@ -144,15 +145,31 @@ public class NacosNamingService implements NamingService {
     public void registerInstance(String serviceName, Instance instance) throws NacosException {
         registerInstance(serviceName, Constants.DEFAULT_GROUP, instance);
     }
-    
+
+    /**
+     * spring 服务实例注册方法
+     * 来源: spring-cloud-starter-alibaba-nacos-discovery-2.2.6.RELEASE.jar
+     * spring.factories中的自动配置类: NacosServiceRegistryAutoConfiguration
+     * 注入了Bean: NacosAutoServiceRegistration,
+     * 继承了抽象类: AbstractAutoServiceRegistration,
+     * 实现了接口类: ApplicationListener的onApplicationEvent()方法,
+     * 调用了bind()方法, 调用了start()方法, 调用了register()方法,
+     * 调用: com.alibaba.cloud.nacos.registry.NacosServiceRegistry#register()方法,
+     * 在此方法中调用了当前方法
+     *
+     * @param serviceName name of service
+     * @param groupName   group of service
+     * @param instance    instance to register
+     * @throws NacosException
+     */
     @Override
     public void registerInstance(String serviceName, String groupName, Instance instance) throws NacosException {
         NamingUtils.checkInstanceIsLegal(instance);
         /**
-         * Grpc:
-         * @see NamingGrpcClientProxy#registerService(java.lang.String, java.lang.String, com.alibaba.nacos.api.naming.pojo.Instance)
-         * Http:
-         * @see NamingHttpClientProxy#registerService(java.lang.String, java.lang.String, com.alibaba.nacos.api.naming.pojo.Instance)
+         * clientProxy在当前对象的构造方法中调用了{@link NacosNamingService#init(Properties)}方法,
+         * 指定了 clientProxy 的实现类为: {@link NamingClientProxyDelegate}
+         * 所以这里调用:
+         * @see NamingClientProxyDelegate#registerService(String, String, Instance)
          */
         clientProxy.registerService(serviceName, groupName, instance);
     }

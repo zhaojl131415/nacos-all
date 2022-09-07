@@ -32,9 +32,15 @@ import java.util.concurrent.ConcurrentHashMap;
 public class ServiceManager {
     
     private static final ServiceManager INSTANCE = new ServiceManager();
-    
+
+    /**
+     * 服务注册表
+     */
     private final ConcurrentHashMap<Service, Service> singletonRepository;
-    
+
+    /**
+     * 命名空间注册表
+     */
     private final ConcurrentHashMap<String, Set<Service>> namespaceSingletonMaps;
     
     private ServiceManager() {
@@ -57,9 +63,13 @@ public class ServiceManager {
      * @return if service is exist, return exist service, otherwise return new service
      */
     public Service getSingleton(Service service) {
+        // 将服务put到map中, 如果已存在, 不做处理
         singletonRepository.putIfAbsent(service, service);
+        // 从map中获取服务
         Service result = singletonRepository.get(service);
+        // 命名空间注册表
         namespaceSingletonMaps.computeIfAbsent(result.getNamespace(), (namespace) -> new ConcurrentHashSet<>());
+        // 将服务加入到对应的命名空间注册表种
         namespaceSingletonMaps.get(result.getNamespace()).add(result);
         return result;
     }

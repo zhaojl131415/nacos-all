@@ -76,23 +76,38 @@ public class ClientServiceIndexesManager extends SmartSubscriber {
             publisherIndexes.remove(service);
         }
     }
-    
+
+    /**
+     * 订阅事件类型
+     * @return
+     */
     @Override
     public List<Class<? extends Event>> subscribeTypes() {
         List<Class<? extends Event>> result = new LinkedList<>();
+        // 注册事件
         result.add(ClientOperationEvent.ClientRegisterServiceEvent.class);
+        // 注销时间
         result.add(ClientOperationEvent.ClientDeregisterServiceEvent.class);
+        // 订阅事件
         result.add(ClientOperationEvent.ClientSubscribeServiceEvent.class);
+        // 取消订阅事件
         result.add(ClientOperationEvent.ClientUnsubscribeServiceEvent.class);
+        // 客户端掉线
         result.add(ClientEvent.ClientDisconnectEvent.class);
         return result;
     }
-    
+
+    /**
+     * 处理事件
+     * @return
+     */
     @Override
     public void onEvent(Event event) {
         if (event instanceof ClientEvent.ClientDisconnectEvent) {
+            // 处理客户端断开连接
             handleClientDisconnect((ClientEvent.ClientDisconnectEvent) event);
         } else if (event instanceof ClientOperationEvent) {
+            // 处理客户端操作
             handleClientOperation((ClientOperationEvent) event);
         }
     }
@@ -118,12 +133,16 @@ public class ClientServiceIndexesManager extends SmartSubscriber {
         Service service = event.getService();
         String clientId = event.getClientId();
         if (event instanceof ClientOperationEvent.ClientRegisterServiceEvent) {
+            // 客户端注册服务事件
             addPublisherIndexes(service, clientId);
         } else if (event instanceof ClientOperationEvent.ClientDeregisterServiceEvent) {
+            // 客户端注销服务事件
             removePublisherIndexes(service, clientId);
         } else if (event instanceof ClientOperationEvent.ClientSubscribeServiceEvent) {
+            // 客户端订阅服务事件
             addSubscriberIndexes(service, clientId);
         } else if (event instanceof ClientOperationEvent.ClientUnsubscribeServiceEvent) {
+            // 客户端取消订阅服务事件
             removeSubscriberIndexes(service, clientId);
         }
     }

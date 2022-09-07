@@ -53,15 +53,20 @@ public class InstanceRequestHandler extends RequestHandler<InstanceRequest, Inst
                 .newService(request.getNamespace(), request.getGroupName(), request.getServiceName(), true);
         switch (request.getType()) {
             case NamingRemoteConstants.REGISTER_INSTANCE:
+                // 服务实例注册
                 return registerInstance(service, request, meta);
             case NamingRemoteConstants.DE_REGISTER_INSTANCE:
+                // 服务实例注销剔除
                 return deregisterInstance(service, request, meta);
             default:
                 throw new NacosException(NacosException.INVALID_PARAM,
                         String.format("Unsupported request type %s", request.getType()));
         }
     }
-    
+
+    /**
+     * 服务实例注册
+     */
     private InstanceResponse registerInstance(Service service, InstanceRequest request, RequestMeta meta)
             throws NacosException {
         clientOperationService.registerInstance(service, request.getInstance(), meta.getConnectionId());

@@ -34,6 +34,7 @@ import com.alibaba.nacos.api.naming.remote.response.QueryServiceResponse;
 import com.alibaba.nacos.api.naming.remote.response.ServiceListResponse;
 import com.alibaba.nacos.api.naming.remote.response.SubscribeServiceResponse;
 import com.alibaba.nacos.api.remote.RemoteConstants;
+import com.alibaba.nacos.api.remote.request.RequestMeta;
 import com.alibaba.nacos.api.remote.response.Response;
 import com.alibaba.nacos.api.remote.response.ResponseCode;
 import com.alibaba.nacos.api.selector.AbstractSelector;
@@ -108,12 +109,21 @@ public class NamingGrpcClientProxy extends AbstractNamingClientProxy {
     public Class<? extends Event> subscribeType() {
         return ServerListChangedEvent.class;
     }
-    
+
+    /**
+     * 服务注册
+     * @param serviceName name of service
+     * @param groupName   group of service
+     * @param instance    instance to register
+     * @throws NacosException
+     */
     @Override
     public void registerService(String serviceName, String groupName, Instance instance) throws NacosException {
         NAMING_LOGGER.info("[REGISTER-SERVICE] {} registering service {} with instance {}", namespaceId, serviceName,
                 instance);
+        // 重试?
         redoService.cacheInstanceForRedo(serviceName, groupName, instance);
+        // 执行服务注册
         doRegisterService(serviceName, groupName, instance);
     }
     
@@ -141,7 +151,7 @@ public class NamingGrpcClientProxy extends AbstractNamingClientProxy {
     }
     
     /**
-     * Execute register operation.
+     * Execute register operation. 执行注册操作
      *
      * @param serviceName name of service
      * @param groupName   group of service
@@ -149,8 +159,10 @@ public class NamingGrpcClientProxy extends AbstractNamingClientProxy {
      * @throws NacosException nacos exception
      */
     public void doRegisterService(String serviceName, String groupName, Instance instance) throws NacosException {
+        // 组装实例请求对象
         InstanceRequest request = new InstanceRequest(namespaceId, serviceName, groupName,
                 NamingRemoteConstants.REGISTER_INSTANCE, instance);
+        // 往服务端发送请求
         requestToServer(request, Response.class);
         redoService.instanceRegistered(serviceName, groupName);
     }
@@ -300,6 +312,13 @@ public class NamingGrpcClientProxy extends AbstractNamingClientProxy {
         try {
             request.putAllHeader(
                     getSecurityHeaders(request.getNamespace(), request.getGroupName(), request.getServiceName()));
+            /**
+             * gRPC远程调用
+             * 这里发起请求之后, 就可以去服务端查看接收服务请求的处理
+             *
+             * @see com.alibaba.nacos.naming.remote.rpc.handler.InstanceRequestHandler#handle(InstanceRequest, RequestMeta)
+             *
+             */
             Response response =
                     requestTimeout < 0 ? rpcClient.request(request) : rpcClient.request(request, requestTimeout);
             if (ResponseCode.SUCCESS.getCode() != response.getResultCode()) {
