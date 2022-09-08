@@ -79,11 +79,13 @@ public class ServiceStorage {
     }
     
     public ServiceInfo getPushData(Service service) {
+        // 构建一个空的ServiceInfo
         ServiceInfo result = emptyServiceInfo(service);
         if (!ServiceManager.getInstance().containSingleton(service)) {
             return result;
         }
         Service singleton = ServiceManager.getInstance().getSingleton(service);
+        // 获取所有实例
         result.setHosts(getAllInstancesFromIndex(singleton));
         serviceDataIndexes.put(singleton, result);
         return result;
@@ -106,7 +108,9 @@ public class ServiceStorage {
     private List<Instance> getAllInstancesFromIndex(Service service) {
         Set<Instance> result = new HashSet<>();
         Set<String> clusters = new HashSet<>();
+        // 遍历根据服务获取注册的所有客户端
         for (String each : serviceIndexesManager.getAllClientsRegisteredService(service)) {
+            // 获取实例
             Optional<InstancePublishInfo> instancePublishInfo = getInstanceInfo(each, service);
             if (instancePublishInfo.isPresent()) {
                 InstancePublishInfo publishInfo = instancePublishInfo.get();
@@ -116,6 +120,7 @@ public class ServiceStorage {
                     List<Instance> batchInstance = parseBatchInstance(service, batchInstancePublishInfo, clusters);
                     result.addAll(batchInstance);
                 } else {
+                    // 转换实例
                     Instance instance = parseInstance(service, instancePublishInfo.get());
                     result.add(instance);
                     clusters.add(instance.getClusterName());
@@ -145,6 +150,7 @@ public class ServiceStorage {
     }
     
     private Optional<InstancePublishInfo> getInstanceInfo(String clientId, Service service) {
+        // 根据客户端id从缓存中获取客户端对象
         Client client = clientManager.getClient(clientId);
         if (null == client) {
             return Optional.empty();

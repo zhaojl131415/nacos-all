@@ -143,13 +143,19 @@ public class EphemeralClientOperationServiceImpl implements ClientOperationServi
     
     @Override
     public void subscribeService(Service service, Subscriber subscriber, String clientId) {
+        // 从服务端注册表缓存中获取服务, 如果存在直接获取缓存中的, 否则获取传入的
         Service singleton = ServiceManager.getInstance().getSingletonIfExist(service).orElse(service);
         Client client = clientManager.getClient(clientId);
         if (!clientIsLegal(client, clientId)) {
             return;
         }
+        /**
+         * 服务绑定订阅者
+         * @see AbstractClient#addServiceSubscriber(Service, Subscriber)
+         */
         client.addServiceSubscriber(singleton, subscriber);
         client.setLastUpdatedTime();
+        // 发布客户端订阅服务事件
         NotifyCenter.publishEvent(new ClientOperationEvent.ClientSubscribeServiceEvent(singleton, clientId));
     }
     

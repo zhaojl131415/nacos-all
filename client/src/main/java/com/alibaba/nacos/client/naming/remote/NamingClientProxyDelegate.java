@@ -161,11 +161,17 @@ public class NamingClientProxyDelegate implements NamingClientProxy {
         NAMING_LOGGER.info("[SUBSCRIBE-SERVICE] service:{}, group:{}, clusters:{} ", serviceName, groupName, clusters);
         String serviceNameWithGroup = NamingUtils.getGroupedName(serviceName, groupName);
         String serviceKey = ServiceInfo.getKey(serviceNameWithGroup, clusters);
+        // 更新本地注册表
         serviceInfoUpdateService.scheduleUpdateIfAbsent(serviceName, groupName, clusters);
         ServiceInfo result = serviceInfoHolder.getServiceInfoMap().get(serviceKey);
         if (null == result || !isSubscribed(serviceName, groupName, clusters)) {
+            /**
+             * 根据服务名获取服务信息
+             * @see NamingGrpcClientProxy#subscribe(String, String, String)
+             */
             result = grpcClientProxy.subscribe(serviceName, groupName, clusters);
         }
+        // 将服务缓存至本地注册表
         serviceInfoHolder.processServiceInfo(result);
         return result;
     }

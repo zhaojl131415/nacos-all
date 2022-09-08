@@ -38,9 +38,15 @@ import java.util.concurrent.ConcurrentHashMap;
  * @author xiweng.yy
  */
 public abstract class AbstractClient implements Client {
-    
+
+    /**
+     * 服务/ 实例发布信息
+     */
     protected final ConcurrentHashMap<Service, InstancePublishInfo> publishers = new ConcurrentHashMap<>(16, 0.75f, 1);
-    
+
+    /**
+     * 服务订阅者, 表示服务的订阅者
+     */
     protected final ConcurrentHashMap<Service, Subscriber> subscribers = new ConcurrentHashMap<>(16, 0.75f, 1);
     
     protected volatile long lastUpdatedTime;
@@ -103,6 +109,7 @@ public abstract class AbstractClient implements Client {
     
     @Override
     public boolean addServiceSubscriber(Service service, Subscriber subscriber) {
+        // 将订阅者put到Map中, 如果是当前服务的首次put, 则累加订阅者数量
         if (null == subscribers.put(service, subscriber)) {
             MetricsMonitor.incrementSubscribeCount();
         }

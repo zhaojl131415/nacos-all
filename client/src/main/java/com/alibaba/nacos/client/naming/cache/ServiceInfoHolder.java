@@ -57,7 +57,10 @@ public class ServiceInfoHolder implements Closeable {
     private static final String FILE_PATH_NAMING = "naming";
     
     private static final String USER_HOME_PROPERTY = "user.home";
-    
+
+    /**
+     * 服务信息缓存: 本地注册表
+     */
     private final ConcurrentMap<String, ServiceInfo> serviceInfoMap;
     
     private final FailoverReactor failoverReactor;
@@ -124,6 +127,7 @@ public class ServiceInfoHolder implements Closeable {
     public ServiceInfo getServiceInfo(final String serviceName, final String groupName, final String clusters) {
         NAMING_LOGGER.debug("failover-mode: {}", failoverReactor.isFailoverSwitch());
         String groupedServiceName = NamingUtils.getGroupedName(serviceName, groupName);
+        // 获取key
         String key = ServiceInfo.getKey(groupedServiceName, clusters);
         if (failoverReactor.isFailoverSwitch()) {
             return failoverReactor.getService(key);
@@ -145,6 +149,7 @@ public class ServiceInfoHolder implements Closeable {
     
     /**
      * Process service info.
+     * 处理服务, 存入本地注册表
      *
      * @param serviceInfo new service info
      * @return service info
@@ -155,11 +160,14 @@ public class ServiceInfoHolder implements Closeable {
             return null;
         }
         ServiceInfo oldService = serviceInfoMap.get(serviceInfo.getKey());
+        // 如果新传入的服务为空, 直接返回老的服务
         if (isEmptyOrErrorPush(serviceInfo)) {
             //empty or error push, just ignore
             return oldService;
         }
+        // 如果新传入的服务不为空, 覆盖本地注册表中的服务
         serviceInfoMap.put(serviceInfo.getKey(), serviceInfo);
+        // 判断新老服务是否修改
         boolean changed = isChangedServiceInfo(oldService, serviceInfo);
         if (StringUtils.isBlank(serviceInfo.getJsonFromServer())) {
             serviceInfo.setJsonFromServer(JacksonUtils.toJson(serviceInfo));
@@ -168,8 +176,10 @@ public class ServiceInfoHolder implements Closeable {
         if (changed) {
             NAMING_LOGGER.info("current ips:({}) service: {} -> {}", serviceInfo.ipCount(), serviceInfo.getKey(),
                     JacksonUtils.toJson(serviceInfo.getHosts()));
+            // 如果服务发生变更, 发送实例变更事件
             NotifyCenter.publishEvent(new InstancesChangeEvent(notifierEventScope, serviceInfo.getName(), serviceInfo.getGroupName(),
                     serviceInfo.getClusters(), serviceInfo.getHosts()));
+            // 磁盘持久化
             DiskCache.write(serviceInfo, cacheDir);
         }
         return serviceInfo;

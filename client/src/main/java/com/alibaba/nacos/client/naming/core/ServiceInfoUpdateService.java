@@ -80,6 +80,7 @@ public class ServiceInfoUpdateService implements Closeable {
     
     /**
      * Schedule update if absent.
+     * 执行一个定时任务
      *
      * @param serviceName service name
      * @param groupName   group name
@@ -94,7 +95,10 @@ public class ServiceInfoUpdateService implements Closeable {
             if (futureMap.get(serviceKey) != null) {
                 return;
             }
-            
+            /**
+             * 添加定时任务执行: 从服务端拉取注册表更新本地注册表
+             * @see UpdateTask#run()
+             */
             ScheduledFuture<?> future = addTask(new UpdateTask(serviceName, groupName, clusters));
             futureMap.put(serviceKey, future);
         }
@@ -175,7 +179,9 @@ public class ServiceInfoUpdateService implements Closeable {
                 
                 ServiceInfo serviceObj = serviceInfoHolder.getServiceInfoMap().get(serviceKey);
                 if (serviceObj == null) {
+                    // 从服务端获取实例对象
                     serviceObj = namingClientProxy.queryInstancesOfService(serviceName, groupName, clusters, 0, false);
+                    // 更新本地注册表
                     serviceInfoHolder.processServiceInfo(serviceObj);
                     lastRefTime = serviceObj.getLastRefTime();
                     return;
@@ -192,12 +198,18 @@ public class ServiceInfoUpdateService implements Closeable {
                 }
                 // TODO multiple time can be configured.
                 delayTime = serviceObj.getCacheMillis() * DEFAULT_UPDATE_CACHE_TIME_MULTIPLE;
+                // 重置错误次数
                 resetFailCount();
             } catch (Throwable e) {
+                // 累加错误次数
                 incFailCount();
                 NAMING_LOGGER.warn("[NA] failed to update serviceName: {}", groupedServiceName, e);
             } finally {
                 if (!isCancel) {
+                    /**
+                     * 调用自己, 循环执行, 计算任务延时时间
+                     * 默认1s向左位移失败次数的位数得到的值 与 60s 比较, 取小
+                     */
                     executor.schedule(this, Math.min(delayTime << failCount, DEFAULT_DELAY * 60),
                             TimeUnit.MILLISECONDS);
                 }

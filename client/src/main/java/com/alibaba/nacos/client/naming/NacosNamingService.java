@@ -253,7 +253,16 @@ public class NacosNamingService implements NamingService {
             throws NacosException {
         return getAllInstances(serviceName, Constants.DEFAULT_GROUP, clusters, subscribe);
     }
-    
+
+    /**
+     * 根据服务名获取所有实例
+     * @param serviceName name of service
+     * @param groupName   group of service
+     * @param clusters    list of cluster
+     * @param subscribe   if subscribe the service
+     * @return
+     * @throws NacosException
+     */
     @Override
     public List<Instance> getAllInstances(String serviceName, String groupName, List<String> clusters,
             boolean subscribe) throws NacosException {
@@ -313,7 +322,19 @@ public class NacosNamingService implements NamingService {
             throws NacosException {
         return selectInstances(serviceName, Constants.DEFAULT_GROUP, clusters, healthy, subscribe);
     }
-    
+
+    /**
+     * 服务发现
+     * 需要从ribbon源码中查看调用源
+     *
+     * @param serviceName name of service
+     * @param groupName   group of service
+     * @param clusters    list of cluster
+     * @param healthy     a flag to indicate returning healthy or unhealthy instances
+     * @param subscribe   if subscribe the service
+     * @return
+     * @throws NacosException
+     */
     @Override
     public List<Instance> selectInstances(String serviceName, String groupName, List<String> clusters, boolean healthy,
             boolean subscribe) throws NacosException {
@@ -321,25 +342,35 @@ public class NacosNamingService implements NamingService {
         ServiceInfo serviceInfo;
         String clusterString = StringUtils.join(clusters, ",");
         if (subscribe) {
+            // 从缓存中获取服务信息
             serviceInfo = serviceInfoHolder.getServiceInfo(serviceName, groupName, clusterString);
             if (null == serviceInfo) {
+                /**
+                 * 订阅
+                 * 当前类的构造方法中指定了值, 初始化了NamingClientProxyDelegate对象
+                 * @see NamingClientProxyDelegate#NamingClientProxyDelegate(String, ServiceInfoHolder, Properties, InstancesChangeNotifier)
+                 *
+                 * @see NamingClientProxyDelegate#subscribe(String, String, String)
+                 */
                 serviceInfo = clientProxy.subscribe(serviceName, groupName, clusterString);
             }
         } else {
             serviceInfo = clientProxy.queryInstancesOfService(serviceName, groupName, clusterString, 0, false);
         }
+        // 将服务端获取的实例列表, 筛选后返回给客户端
         return selectInstances(serviceInfo, healthy);
     }
     
     private List<Instance> selectInstances(ServiceInfo serviceInfo, boolean healthy) {
         List<Instance> list;
+        // 空判断
         if (serviceInfo == null || CollectionUtils.isEmpty(list = serviceInfo.getHosts())) {
             return new ArrayList<>();
         }
-        
         Iterator<Instance> iterator = list.iterator();
         while (iterator.hasNext()) {
             Instance instance = iterator.next();
+            // 健康检查, 禁用, 权重
             if (healthy != instance.isHealthy() || !instance.isEnabled() || instance.getWeight() <= 0) {
                 iterator.remove();
             }

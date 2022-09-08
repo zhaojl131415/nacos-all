@@ -162,7 +162,7 @@ public class NamingGrpcClientProxy extends AbstractNamingClientProxy {
         // 组装实例请求对象
         InstanceRequest request = new InstanceRequest(namespaceId, serviceName, groupName,
                 NamingRemoteConstants.REGISTER_INSTANCE, instance);
-        // 往服务端发送请求
+        // 往服务端发送请求: 服务注册
         requestToServer(request, Response.class);
         redoService.instanceRegistered(serviceName, groupName);
     }
@@ -262,9 +262,14 @@ public class NamingGrpcClientProxy extends AbstractNamingClientProxy {
      * @throws NacosException nacos exception
      */
     public ServiceInfo doSubscribe(String serviceName, String groupName, String clusters) throws NacosException {
+        /**
+         * 封装订阅服务请求
+         */
         SubscribeServiceRequest request = new SubscribeServiceRequest(namespaceId, groupName, serviceName, clusters,
                 true);
+        // 去服务端请求
         SubscribeServiceResponse response = requestToServer(request, SubscribeServiceResponse.class);
+        // 订阅注册服务
         redoService.subscriberRegistered(serviceName, groupName, clusters);
         return response.getServiceInfo();
     }
@@ -316,7 +321,10 @@ public class NamingGrpcClientProxy extends AbstractNamingClientProxy {
              * gRPC远程调用
              * 这里发起请求之后, 就可以去服务端查看接收服务请求的处理
              *
+             * 服务注册
              * @see com.alibaba.nacos.naming.remote.rpc.handler.InstanceRequestHandler#handle(InstanceRequest, RequestMeta)
+             * 订阅服务
+             * @see com.alibaba.nacos.naming.remote.rpc.handler.SubscribeServiceRequestHandler#handle(SubscribeServiceRequest, RequestMeta)
              *
              */
             Response response =

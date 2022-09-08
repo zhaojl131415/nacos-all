@@ -45,15 +45,27 @@ import java.util.concurrent.ConcurrentMap;
  */
 @Component
 public class ClientServiceIndexesManager extends SmartSubscriber {
-    
+
+    /**
+     * 服务注册表: 服务提供者
+     * <服务, Set<客户端id>>
+     */
     private final ConcurrentMap<Service, Set<String>> publisherIndexes = new ConcurrentHashMap<>();
-    
+
+    /**
+     * 服务订阅表: 服务消费者
+     */
     private final ConcurrentMap<Service, Set<String>> subscriberIndexes = new ConcurrentHashMap<>();
     
     public ClientServiceIndexesManager() {
         NotifyCenter.registerSubscriber(this, NamingEventPublisherFactory.getInstance());
     }
-    
+
+    /**
+     * 根据服务获取所有客户端连接id集合
+     * @param service
+     * @return
+     */
     public Collection<String> getAllClientsRegisteredService(Service service) {
         return publisherIndexes.containsKey(service) ? publisherIndexes.get(service) : new ConcurrentHashSet<>();
     }
@@ -148,8 +160,11 @@ public class ClientServiceIndexesManager extends SmartSubscriber {
     }
     
     private void addPublisherIndexes(Service service, String clientId) {
+        // 类似putIfAbsent, 当key存在的时候不操作, 不存在则put, 但是computeIfAbsent性能更好, 不用提前确定value, 而在需要的时候才执行函数去确定value
         publisherIndexes.computeIfAbsent(service, (key) -> new ConcurrentHashSet<>());
+        // 将客户端id, put到服务注册表Map中
         publisherIndexes.get(service).add(clientId);
+        // 发送服务变更事件
         NotifyCenter.publishEvent(new ServiceEvent.ServiceChangedEvent(service, true));
     }
     
@@ -157,7 +172,9 @@ public class ClientServiceIndexesManager extends SmartSubscriber {
         if (!publisherIndexes.containsKey(service)) {
             return;
         }
+        // 从服务注册表中移除
         publisherIndexes.get(service).remove(clientId);
+        // 发送服务变更事件
         NotifyCenter.publishEvent(new ServiceEvent.ServiceChangedEvent(service, true));
     }
     
