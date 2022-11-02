@@ -165,7 +165,11 @@ public class NacosConfigService implements ConfigService {
         // but is maintained by user.
         // This is designed for certain scenario like client emergency reboot,
         // changing config needed in the same time, while nacos server is down.
+        /**
+         * 获取本地文件配置信息
+         */
         String content = LocalConfigInfoProcessor.getFailover(worker.getAgentName(), dataId, group, tenant);
+        // 如果本地获取到配置文件, 直接读取本地返回
         if (content != null) {
             LOGGER.warn("[{}] [get-config] get failover ok, dataId={}, group={}, tenant={}, config={}",
                     worker.getAgentName(), dataId, group, tenant, ContentUtils.truncateContent(content));
@@ -177,8 +181,11 @@ public class NacosConfigService implements ConfigService {
             content = cr.getContent();
             return content;
         }
-        
+        // 读取远程配置文件
         try {
+            /**
+             * 远程调用, 获取配置信息
+             */
             ConfigResponse response = worker.getServerConfig(dataId, group, tenant, timeoutMs, false);
             cr.setContent(response.getContent());
             cr.setEncryptedDataKey(response.getEncryptedDataKey());
@@ -193,7 +200,7 @@ public class NacosConfigService implements ConfigService {
             LOGGER.warn("[{}] [get-config] get from server error, dataId={}, group={}, tenant={}, msg={}",
                     worker.getAgentName(), dataId, group, tenant, ioe.toString());
         }
-
+        // 容错, 获取本地快照
         content = LocalConfigInfoProcessor.getSnapshot(worker.getAgentName(), dataId, group, tenant);
         if (content != null) {
             LOGGER.warn("[{}] [get-config] get snapshot ok, dataId={}, group={}, tenant={}, config={}",
@@ -217,7 +224,21 @@ public class NacosConfigService implements ConfigService {
         ParamUtils.checkKeyParam(dataId, group);
         return worker.removeConfig(dataId, group, tenant, tag);
     }
-    
+
+    /**
+     * 发布配置
+     * @param tenant
+     * @param dataId
+     * @param group
+     * @param tag
+     * @param appName
+     * @param betaIps
+     * @param content
+     * @param type
+     * @param casMd5
+     * @return
+     * @throws NacosException
+     */
     private boolean publishConfigInner(String tenant, String dataId, String group, String tag, String appName,
             String betaIps, String content, String type, String casMd5) throws NacosException {
         group = blank2defaultGroup(group);

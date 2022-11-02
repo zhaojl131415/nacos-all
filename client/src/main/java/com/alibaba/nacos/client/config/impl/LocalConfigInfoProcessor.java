@@ -74,6 +74,7 @@ public class LocalConfigInfoProcessor {
         }
         
         try {
+            // 读取文件配置
             return readFile(localPath);
         } catch (IOException ioe) {
             LOGGER.error("[" + serverName + "] get failover error, " + localPath, ioe);

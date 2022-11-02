@@ -87,6 +87,7 @@ public class ServiceStorage {
         Service singleton = ServiceManager.getInstance().getSingleton(service);
         // 获取所有实例
         result.setHosts(getAllInstancesFromIndex(singleton));
+        // 添加到注册表缓存
         serviceDataIndexes.put(singleton, result);
         return result;
     }

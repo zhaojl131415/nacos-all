@@ -67,7 +67,14 @@ public class ConfigQueryRequestHandler extends RequestHandler<ConfigQueryRequest
     public ConfigQueryRequestHandler(PersistService persistService) {
         this.persistService = persistService;
     }
-    
+
+    /**
+     * 处理配置信息查询
+     * @param request request
+     * @param meta    request meta data
+     * @return
+     * @throws NacosException
+     */
     @Override
     @TpsControl(pointName = "ConfigQuery", parsers = {ConfigQueryGroupKeyParser.class, ConfigQueryGroupParser.class})
     @Secured(action = ActionTypes.READ, signType = SignType.CONFIG)
@@ -85,6 +92,7 @@ public class ConfigQueryRequestHandler extends RequestHandler<ConfigQueryRequest
             throws UnsupportedEncodingException {
         String dataId = configQueryRequest.getDataId();
         String group = configQueryRequest.getGroup();
+        // 命名空间
         String tenant = configQueryRequest.getTenant();
         String clientIp = meta.getClientIp();
         String tag = configQueryRequest.getTag();

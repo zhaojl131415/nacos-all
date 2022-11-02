@@ -76,11 +76,13 @@ public class CacheData {
     public final String dataId;
     
     public final String group;
-    
+
+    // 租户/命名空间
     public final String tenant;
-    
+
     private final CopyOnWriteArrayList<ManagerListenerWrap> listeners;
-    
+
+    // 根据md5检测配置文件是否发生修改
     private volatile String md5;
     
     /**

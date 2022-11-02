@@ -96,7 +96,12 @@ public abstract class AbstractClient implements Client {
         Loggers.SRV_LOG.info("Client remove for service {}, {}", service, getClientId());
         return result;
     }
-    
+
+    /**
+     * 根据客户端服务获取服务的实例信息。
+     * @param service service of instance
+     * @return
+     */
     @Override
     public InstancePublishInfo getInstancePublishInfo(Service service) {
         return publishers.get(service);

@@ -33,7 +33,8 @@ public class CacheItem {
     public CacheItem(String groupKey) {
         this.groupKey = StringPool.get(groupKey);
     }
-    
+
+    // MD5, 用来判断配置是否修改
     public String getMd5() {
         return md5;
     }
@@ -41,7 +42,8 @@ public class CacheItem {
     public void setMd5(String md5) {
         this.md5 = md5;
     }
-    
+
+    // 全量/增量更新
     public long getLastModifiedTs() {
         return lastModifiedTs;
     }

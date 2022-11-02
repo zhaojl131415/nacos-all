@@ -36,6 +36,7 @@ import com.alibaba.nacos.api.config.remote.response.ConfigRemoveResponse;
 import com.alibaba.nacos.api.exception.NacosException;
 import com.alibaba.nacos.api.remote.RemoteConstants;
 import com.alibaba.nacos.api.remote.request.Request;
+import com.alibaba.nacos.api.remote.request.RequestMeta;
 import com.alibaba.nacos.api.remote.response.Response;
 import com.alibaba.nacos.plugin.auth.api.RequestResource;
 import com.alibaba.nacos.client.config.common.GroupKey;
@@ -110,6 +111,7 @@ public class ClientWorker implements Closeable {
     
     /**
      * groupKey -> cacheData.
+     * 缓存配置数据
      */
     private final AtomicReference<Map<String, CacheData>> cacheMap = new AtomicReference<>(new HashMap<>());
     
@@ -396,6 +398,9 @@ public class ClientWorker implements Closeable {
         if (StringUtils.isBlank(group)) {
             group = Constants.DEFAULT_GROUP;
         }
+        /**
+         * @see ConfigRpcTransportClient#queryConfig(String, String, String, long, boolean)
+         */
         return this.agent.queryConfig(dataId, group, tenant, readTimeout, notify);
     }
     
@@ -938,6 +943,7 @@ public class ClientWorker implements Closeable {
         @Override
         public ConfigResponse queryConfig(String dataId, String group, String tenant, long readTimeouts, boolean notify)
                 throws NacosException {
+            // 构建请求
             ConfigQueryRequest request = ConfigQueryRequest.build(dataId, group, tenant);
             request.putHeader(NOTIFY_HEADER, String.valueOf(notify));
             RpcClient rpcClient = getOneRunningClient();
@@ -947,10 +953,15 @@ public class ClientWorker implements Closeable {
                     rpcClient = ensureRpcClient(String.valueOf(cacheData.getTaskId()));
                 }
             }
+            /**
+             * 底层RPC调用, 调用方:
+             * @see com.alibaba.nacos.config.server.remote.ConfigQueryRequestHandler#handle(ConfigQueryRequest, RequestMeta)
+             */
             ConfigQueryResponse response = (ConfigQueryResponse) requestProxy(rpcClient, request, readTimeouts);
             
             ConfigResponse configResponse = new ConfigResponse();
             if (response.isSuccess()) {
+                // 将响应结果保存到快照中, 文件写入
                 LocalConfigInfoProcessor.saveSnapshot(this.getName(), dataId, group, tenant, response.getContent());
                 configResponse.setContent(response.getContent());
                 String configType;

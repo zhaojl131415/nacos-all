@@ -48,12 +48,13 @@ public class ClientServiceIndexesManager extends SmartSubscriber {
 
     /**
      * 服务注册表: 服务提供者
-     * <服务, Set<客户端id>>
+     * < 服务, Set< 客户端id> >
      */
     private final ConcurrentMap<Service, Set<String>> publisherIndexes = new ConcurrentHashMap<>();
 
     /**
      * 服务订阅表: 服务消费者
+     * < 订阅者服务, 客户端id集合 >
      */
     private final ConcurrentMap<Service, Set<String>> subscriberIndexes = new ConcurrentHashMap<>();
     
