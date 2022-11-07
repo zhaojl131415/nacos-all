@@ -85,6 +85,7 @@ public class NacosConfigService implements ConfigService {
         ValidatorUtils.checkInitParam(properties);
         // 初始化命名空间
         initNamespace(properties);
+        // 实例化一个配置中心过滤器链路管理器: 可实现对配置内容的加/解密
         this.configFilterChainManager = new ConfigFilterChainManager(properties);
         ServerListManager serverListManager = new ServerListManager(properties);
         serverListManager.start();
@@ -237,6 +238,7 @@ public class NacosConfigService implements ConfigService {
             String encryptedDataKey = LocalEncryptedDataKeyProcessor
                     .getEncryptDataKeyFailover(agent.getName(), dataId, group, tenant);
             cr.setEncryptedDataKey(encryptedDataKey);
+            // 配置过滤链管理器: 解密, 责任链模式
             configFilterChainManager.doFilter(null, cr);
             content = cr.getContent();
             return content;

@@ -153,7 +153,7 @@ public class ConfigController {
             type = ConfigType.getDefaultType().getType();
         }
         
-        // encrypted
+        // encrypted 对配置进行加密处理
         Pair<String, String> pair = EncryptionHandler.encryptHandler(dataId, content);
         content = pair.getSecond();
         

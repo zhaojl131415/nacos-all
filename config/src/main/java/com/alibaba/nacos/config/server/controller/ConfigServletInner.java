@@ -250,6 +250,7 @@ public class ConfigServletInner {
                 }
                 
                 if (PropertyUtil.isDirectRead()) {
+                    // 执行解密
                     Pair<String, String> pair = EncryptionHandler.decryptHandler(dataId,
                             configInfoBase.getEncryptedDataKey(), configInfoBase.getContent());
                     out = response.getWriter();
@@ -259,6 +260,7 @@ public class ConfigServletInner {
                 } else {
                     String fileContent = IoUtils.toString(fis, StandardCharsets.UTF_8.name());
                     String encryptedDataKey = cacheItem.getEncryptedDataKey();
+                    // 执行解密
                     Pair<String, String> pair = EncryptionHandler.decryptHandler(dataId, encryptedDataKey, fileContent);
                     String decryptContent = pair.getSecond();
                     out = response.getWriter();

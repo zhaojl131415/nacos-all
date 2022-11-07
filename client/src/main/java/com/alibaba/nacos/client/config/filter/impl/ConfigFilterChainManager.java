@@ -28,6 +28,7 @@ import java.util.Properties;
 import java.util.ServiceLoader;
 
 /**
+ * 配置中心过滤器链路管理器
  * Config Filter Chain Management.
  *
  * @author Nacos
@@ -37,6 +38,7 @@ public class ConfigFilterChainManager implements IConfigFilterChain {
     private final List<IConfigFilter> filters = new ArrayList<>();
     
     public ConfigFilterChainManager(Properties properties) {
+        // 通过读取SPI配置, 遍历添加过滤器.
         ServiceLoader<IConfigFilter> configFilters = ServiceLoader.load(IConfigFilter.class);
         for (IConfigFilter configFilter : configFilters) {
             configFilter.init(properties);
@@ -92,6 +94,9 @@ public class ConfigFilterChainManager implements IConfigFilterChain {
             if (this.currentPosition != this.additionalFilters.size()) {
                 this.currentPosition++;
                 IConfigFilter nextFilter = this.additionalFilters.get(this.currentPosition - 1);
+                /**
+                 * @see ConfigEncryptionFilter#doFilter(IConfigRequest, IConfigResponse, IConfigFilterChain)
+                 */
                 nextFilter.doFilter(request, response, this);
             }
         }

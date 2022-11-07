@@ -29,6 +29,7 @@ import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
+ * 加密插件管理器
  * Encryption Plugin Management.
  *
  * @author lixiaoshuang

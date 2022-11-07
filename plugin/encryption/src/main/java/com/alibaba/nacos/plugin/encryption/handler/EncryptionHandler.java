@@ -41,6 +41,7 @@ public class EncryptionHandler {
     private static final String PREFIX = "cipher-";
     
     /**
+     * 执行加密
      * Execute encryption.
      *
      * @param dataId  dataId
@@ -52,19 +53,24 @@ public class EncryptionHandler {
             return Pair.with("", content);
         }
         String algorithmName = parseAlgorithmName(dataId);
+        // 通过spi获取加密插件服务
         Optional<EncryptionPluginService> optional = EncryptionPluginManager.instance()
                 .findEncryptionService(algorithmName);
         if (!optional.isPresent()) {
             LOGGER.warn("[EncryptionHandler] [encryptHandler] No encryption program with the corresponding name found");
             return Pair.with("", content);
         }
+        // 获取加密插件服务
         EncryptionPluginService encryptionPluginService = optional.get();
+        // 获取密钥
         String secretKey = encryptionPluginService.generateSecretKey();
+        // 根据密钥对配置内容进行加密
         String encryptContent = encryptionPluginService.encrypt(secretKey, content);
         return Pair.with(encryptionPluginService.encryptSecretKey(secretKey), encryptContent);
     }
     
     /**
+     * 执行解密
      * Execute decryption.
      *
      * @param dataId    dataId

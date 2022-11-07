@@ -50,7 +50,7 @@ public class ConfigEncryptionFilter extends AbstractConfigFilter {
             ConfigRequest configRequest = (ConfigRequest) request;
             String dataId = configRequest.getDataId();
             String content = configRequest.getContent();
-            
+            // 解密
             Pair<String, String> pair = EncryptionHandler.encryptHandler(dataId, content);
             String secretKey = pair.getFirst();
             String encryptContent = pair.getSecond();
@@ -66,7 +66,7 @@ public class ConfigEncryptionFilter extends AbstractConfigFilter {
             String dataId = configResponse.getDataId();
             String encryptedDataKey = configResponse.getEncryptedDataKey();
             String content = configResponse.getContent();
-            
+            // 解密
             Pair<String, String> pair = EncryptionHandler.decryptHandler(dataId, encryptedDataKey, content);
             String decryptContent = pair.getSecond();
             ((ConfigResponse) response).setContent(decryptContent);

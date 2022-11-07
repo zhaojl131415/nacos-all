@@ -17,6 +17,7 @@
 package com.alibaba.nacos.plugin.encryption.spi;
 
 /**
+ * 加密和解密spi。
  * Encryption and decryption spi.
  *
  * @author lixiaoshuang
@@ -24,6 +25,7 @@ package com.alibaba.nacos.plugin.encryption.spi;
 public interface EncryptionPluginService {
     
     /**
+     * 加密接口
      * Encrypted interface.
      *
      * @param secretKey secret key
@@ -33,6 +35,7 @@ public interface EncryptionPluginService {
     String encrypt(String secretKey, String content);
     
     /**
+     * 解密接口
      * Decryption interface.
      *
      * @param secretKey secret key
