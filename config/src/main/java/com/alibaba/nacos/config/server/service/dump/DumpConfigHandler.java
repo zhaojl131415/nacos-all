@@ -34,6 +34,7 @@ import com.alibaba.nacos.config.server.service.trace.ConfigTraceService;
 public class DumpConfigHandler extends Subscriber<ConfigDumpEvent> {
     
     /**
+     * 触发配置dump事件: 保存配置文件到本地并在缓存中更新md5值。
      * trigger config dump event.
      *
      * @param event {@link ConfigDumpEvent}
@@ -84,6 +85,7 @@ public class DumpConfigHandler extends Subscriber<ConfigDumpEvent> {
             
             boolean result;
             if (!event.isRemove()) {
+                // 核心方法: 保存配置文件到本地并在缓存中更新md5值。
                 result = ConfigCacheService
                         .dump(dataId, group, namespaceId, content, lastModified, type, encryptedDataKey);
                 

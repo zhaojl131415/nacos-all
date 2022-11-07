@@ -16,37 +16,33 @@
 
 package com.alibaba.nacos.config.server.service;
 
+import com.alibaba.nacos.common.notify.Event;
 import com.alibaba.nacos.common.notify.NotifyCenter;
 import com.alibaba.nacos.common.utils.MD5Utils;
+import com.alibaba.nacos.common.utils.StringUtils;
 import com.alibaba.nacos.config.server.constant.Constants;
 import com.alibaba.nacos.config.server.model.CacheItem;
 import com.alibaba.nacos.config.server.model.ConfigInfoBase;
 import com.alibaba.nacos.config.server.model.event.LocalDataChangeEvent;
+import com.alibaba.nacos.config.server.remote.RpcConfigChangeNotifier;
 import com.alibaba.nacos.config.server.service.repository.PersistService;
 import com.alibaba.nacos.config.server.utils.DiskUtil;
 import com.alibaba.nacos.config.server.utils.GroupKey;
 import com.alibaba.nacos.config.server.utils.GroupKey2;
 import com.alibaba.nacos.config.server.utils.PropertyUtil;
-import com.alibaba.nacos.common.utils.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.HashMap;
+import java.util.*;
 import java.util.Map.Entry;
-import java.util.Map;
-import java.util.Collections;
 import java.util.concurrent.ConcurrentHashMap;
 
-import static com.alibaba.nacos.config.server.utils.LogUtil.DUMP_LOG;
-import static com.alibaba.nacos.config.server.utils.LogUtil.FATAL_LOG;
-import static com.alibaba.nacos.config.server.utils.LogUtil.DEFAULT_LOG;
+import static com.alibaba.nacos.config.server.utils.LogUtil.*;
 
 /**
+ * 配置中心缓存服务
  * Config service.
  *
  * @author Nacos
@@ -65,9 +61,13 @@ public class ConfigCacheService {
     
     /**
      * groupKey -> cacheItem.
+     * 用户绑定group对应的cacheItem
      */
     private static final ConcurrentHashMap<String, CacheItem> CACHE = new ConcurrentHashMap<>();
-    
+
+    /**
+     * 持久化服务
+     */
     @Autowired
     private static PersistService persistService;
     
@@ -80,6 +80,7 @@ public class ConfigCacheService {
     }
     
     /**
+     * 保存配置文件到本地并在缓存中更新md5值。
      * Save config file and update md5 value in cache.
      *
      * @param dataId         dataId string value.
@@ -92,9 +93,12 @@ public class ConfigCacheService {
      */
     public static boolean dump(String dataId, String group, String tenant, String content, long lastModifiedTs,
             String type, String encryptedDataKey) {
+        // 生成groupKey
         String groupKey = GroupKey2.getKey(dataId, group, tenant);
+        // 获取缓存数据: MD5, 最后更新时间
         CacheItem ci = makeSure(groupKey, encryptedDataKey, false);
         ci.setType(type);
+        // 尝试加写锁
         final int lockResult = tryWriteLock(groupKey);
         assert (lockResult != 0);
         
@@ -104,20 +108,25 @@ public class ConfigCacheService {
         }
         
         try {
+            // 根据数据库中的内容生成MD5
             final String md5 = MD5Utils.md5Hex(content, Constants.ENCODE);
+            // 如果数据库中的最后更新时间 < 缓存的最后更新时间, 则忽略, 不予处理, 表示数据库的数据不是最新的, 已经同步过了
             if (lastModifiedTs < ConfigCacheService.getLastModifiedTs(groupKey)) {
                 DUMP_LOG.warn("[dump-ignore] the content is old. groupKey={}, md5={}, lastModifiedOld={}, "
                                 + "lastModifiedNew={}", groupKey, md5, ConfigCacheService.getLastModifiedTs(groupKey),
                         lastModifiedTs);
                 return true;
             }
+            // 如果数据库内容生成的MD5和缓存中的MD5相等, 并且能找到磁盘对应的目标配置文件, 则忽略, 不予处理
             if (md5.equals(ConfigCacheService.getContentMd5(groupKey)) && DiskUtil.targetFile(dataId, group, tenant).exists()) {
                 DUMP_LOG.warn("[dump-ignore] ignore to save cache file. groupKey={}, md5={}, lastModifiedOld={}, "
                                 + "lastModifiedNew={}", groupKey, md5, ConfigCacheService.getLastModifiedTs(groupKey),
                         lastModifiedTs);
             } else if (!PropertyUtil.isDirectRead()) {
+                // 将数据库的配置内容, 根据dateId, group, tenant写入对应的磁盘本地文件
                 DiskUtil.saveToDisk(dataId, group, tenant, content);
             }
+            // 更新缓存数据: MD5, 最后更新时间
             updateMd5(groupKey, md5, lastModifiedTs, encryptedDataKey);
             return true;
         } catch (IOException ioe) {
@@ -133,6 +142,7 @@ public class ConfigCacheService {
             }
             return false;
         } finally {
+            // 释放写锁
             releaseWriteLock(groupKey);
         }
     }
@@ -502,10 +512,19 @@ public class ConfigCacheService {
      * @param lastModifiedTs lastModifiedTs long value.
      */
     public static void updateMd5(String groupKey, String md5, long lastModifiedTs, String encryptedDataKey) {
+        // 获取缓存
         CacheItem cache = makeSure(groupKey, encryptedDataKey, false);
+        // 如果缓存的md5为空 || 数据库的配置内容生成的md5和缓存的md5不相等, 则更新md5,最后更新时间
         if (cache.md5 == null || !cache.md5.equals(md5)) {
             cache.md5 = md5;
             cache.lastModifiedTs = lastModifiedTs;
+            /**
+             * 发布一个本地数据修改的事件, 事件驱动模型: 通知客户端配置发生了修改
+             * 发布事件:
+             * @see NotifyCenter#publishEvent(Class, Event)
+             * 订阅事件:
+             * @see RpcConfigChangeNotifier#onEvent(LocalDataChangeEvent)
+             */
             NotifyCenter.publishEvent(new LocalDataChangeEvent(groupKey));
         }
     }
@@ -712,6 +731,7 @@ public class ConfigCacheService {
     }
     
     static CacheItem makeSure(final String groupKey, String encryptedDataKey, boolean isBeta) {
+        // 根据groupKey获取缓存内的数据
         CacheItem item = CACHE.get(groupKey);
         if (null != item) {
             setEncryptDateKey(item, encryptedDataKey, isBeta);

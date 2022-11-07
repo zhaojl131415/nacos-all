@@ -103,6 +103,7 @@ public class ConfigPublishRequestHandler extends RequestHandler<ConfigPublishReq
             configInfo.setType(type);
             configInfo.setEncryptedDataKey(encryptedDataKey);
             String betaIps = request.getAdditionParam("betaIps");
+            // 根据条件判断, 执行持久化
             if (StringUtils.isBlank(betaIps)) {
                 if (StringUtils.isBlank(tag)) {
                     if (StringUtils.isNotBlank(request.getCasMd5())) {

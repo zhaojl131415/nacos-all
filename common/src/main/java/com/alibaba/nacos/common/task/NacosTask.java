@@ -17,6 +17,7 @@
 package com.alibaba.nacos.common.task;
 
 /**
+ * 最基础的Nacos任务接口
  * Nacos task.
  *
  * @author xiweng.yy

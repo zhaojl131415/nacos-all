@@ -42,6 +42,7 @@ import com.alibaba.nacos.config.server.result.code.ResultCodeEnum;
 import com.alibaba.nacos.config.server.service.AggrWhitelist;
 import com.alibaba.nacos.config.server.service.ConfigChangePublisher;
 import com.alibaba.nacos.config.server.service.ConfigSubService;
+import com.alibaba.nacos.config.server.service.notify.AsyncNotifyService;
 import com.alibaba.nacos.config.server.service.repository.PersistService;
 import com.alibaba.nacos.config.server.service.trace.ConfigTraceService;
 import com.alibaba.nacos.config.server.utils.GroupKey;
@@ -51,6 +52,7 @@ import com.alibaba.nacos.config.server.utils.RequestUtil;
 import com.alibaba.nacos.config.server.utils.TimeUtils;
 import com.alibaba.nacos.config.server.utils.YamlParserUtil;
 import com.alibaba.nacos.config.server.utils.ZipUtils;
+import com.alibaba.nacos.core.cluster.ServerMemberManager;
 import com.alibaba.nacos.plugin.auth.constant.ActionTypes;
 import com.alibaba.nacos.plugin.auth.constant.SignType;
 import com.alibaba.nacos.plugin.encryption.handler.EncryptionHandler;
@@ -182,10 +184,18 @@ public class ConfigController {
         configInfo.setEncryptedDataKey(encryptedDataKey);
         if (StringUtils.isBlank(betaIps)) {
             if (StringUtils.isBlank(tag)) {
+                // 持久化服务: 插入或修改配置持久化到mysql
                 persistService.insertOrUpdate(srcIp, srcUser, configInfo, time, configAdvanceInfo, false);
+                /**
+                 * 发布通知配置变更事件: ConfigDataChangeEvent, 这是客户端能感知到配置更新的根本原因
+                 *
+                 * 注册事件订阅者
+                 * @see AsyncNotifyService#AsyncNotifyService(ServerMemberManager)
+                 */
                 ConfigChangePublisher.notifyConfigChange(
                         new ConfigDataChangeEvent(false, dataId, group, tenant, time.getTime()));
             } else {
+                // 持久化服务: 插入或修改配置
                 persistService.insertOrUpdateTag(configInfo, tag, srcIp, srcUser, time, false);
                 ConfigChangePublisher.notifyConfigChange(
                         new ConfigDataChangeEvent(false, dataId, group, tenant, tag, time.getTime()));
@@ -193,6 +203,7 @@ public class ConfigController {
         } else {
             // beta publish
             configInfo.setEncryptedDataKey(encryptedDataKey);
+            // 持久化服务: 插入或修改配置
             persistService.insertOrUpdateBeta(configInfo, betaIps, srcIp, srcUser, time, false);
             ConfigChangePublisher.notifyConfigChange(
                     new ConfigDataChangeEvent(true, dataId, group, tenant, time.getTime()));

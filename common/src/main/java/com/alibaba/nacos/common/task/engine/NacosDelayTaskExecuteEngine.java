@@ -20,6 +20,7 @@ import com.alibaba.nacos.api.exception.NacosException;
 import com.alibaba.nacos.common.executor.ExecutorFactory;
 import com.alibaba.nacos.common.executor.NameThreadFactory;
 import com.alibaba.nacos.common.task.AbstractDelayTask;
+import com.alibaba.nacos.common.task.NacosTask;
 import com.alibaba.nacos.common.task.NacosTaskProcessor;
 import org.slf4j.Logger;
 
@@ -31,6 +32,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.ReentrantLock;
 
 /**
+ * Nacos延时任务执行引擎
  * Nacos delay task execute engine.
  *
  * @author xiweng.yy
@@ -126,6 +128,7 @@ public class NacosDelayTaskExecuteEngine extends AbstractNacosTaskExecuteEngine<
         try {
             AbstractDelayTask existTask = tasks.get(key);
             if (null != existTask) {
+                // 合并任务
                 newTask.merge(existTask);
             }
             tasks.put(key, newTask);
@@ -138,12 +141,16 @@ public class NacosDelayTaskExecuteEngine extends AbstractNacosTaskExecuteEngine<
      * process tasks in execute engine.
      */
     protected void processTasks() {
+        // 获取所有任务
         Collection<Object> keys = getAllTaskKeys();
+        // 遍历任务
         for (Object taskKey : keys) {
+            // 拿到任务后删除
             AbstractDelayTask task = removeTask(taskKey);
             if (null == task) {
                 continue;
             }
+            // 拿到任务处理器
             NacosTaskProcessor processor = getProcessor(taskKey);
             if (null == processor) {
                 getEngineLog().error("processor not found for task, so discarded. " + task);
@@ -151,7 +158,11 @@ public class NacosDelayTaskExecuteEngine extends AbstractNacosTaskExecuteEngine<
             }
             try {
                 // ReAdd task if process failed
+                /**
+                 * @see com.alibaba.nacos.config.server.service.dump.processor.DumpProcessor#process(NacosTask)
+                 */
                 if (!processor.process(task)) {
+                    // 如果处理失败，则重新添加任务
                     retryFailedTask(taskKey, task);
                 }
             } catch (Throwable e) {

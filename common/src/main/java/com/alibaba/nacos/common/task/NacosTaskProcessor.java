@@ -17,6 +17,7 @@
 package com.alibaba.nacos.common.task;
 
 /**
+ * 最基础的Nacos任务处理器
  * Task processor.
  *
  * @author Nacos
@@ -24,6 +25,7 @@ package com.alibaba.nacos.common.task;
 public interface NacosTaskProcessor {
     
     /**
+     * 处理任务
      * Process task.
      *
      * @param task     task.

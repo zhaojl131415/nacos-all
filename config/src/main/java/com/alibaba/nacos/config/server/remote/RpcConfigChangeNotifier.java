@@ -18,9 +18,12 @@ package com.alibaba.nacos.config.server.remote;
 
 import com.alibaba.nacos.api.config.remote.request.ConfigChangeNotifyRequest;
 import com.alibaba.nacos.api.remote.AbstractPushCallBack;
+import com.alibaba.nacos.api.remote.PushCallBack;
+import com.alibaba.nacos.api.remote.request.ServerRequest;
 import com.alibaba.nacos.common.notify.Event;
 import com.alibaba.nacos.common.notify.NotifyCenter;
 import com.alibaba.nacos.common.notify.listener.Subscriber;
+import com.alibaba.nacos.common.remote.client.RpcClient;
 import com.alibaba.nacos.common.utils.CollectionUtils;
 import com.alibaba.nacos.common.utils.StringUtils;
 import com.alibaba.nacos.config.server.model.event.LocalDataChangeEvent;
@@ -39,6 +42,7 @@ import org.springframework.stereotype.Component;
 import javax.annotation.PostConstruct;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -82,6 +86,8 @@ public class RpcConfigChangeNotifier extends Subscriber<LocalDataChangeEvent> {
     private ConnectionManager connectionManager;
     
     /**
+     * 配置数据变更
+     * 适配器到配置模块，当服务器端配置更改时，调用此方法。
      * adaptor to config module ,when server side config change ,invoke this method.
      *
      * @param groupKey groupKey
@@ -111,16 +117,26 @@ public class RpcConfigChangeNotifier extends Subscriber<LocalDataChangeEvent> {
             if (StringUtils.isNotBlank(tag) && !tag.equals(clientTag)) {
                 continue;
             }
-            
+            /**
+             * 构建配置变更的通知请求
+             */
             ConfigChangeNotifyRequest notifyRequest = ConfigChangeNotifyRequest.build(dataId, group, tenant);
             
             RpcPushTask rpcPushRetryTask = new RpcPushTask(notifyRequest, 50, client, clientIp, metaInfo.getAppName());
+            /**
+             * 发送rpc请求, 执行请求处:
+             * @see com.alibaba.nacos.client.config.impl.ClientWorker.ConfigRpcTransportClient#initRpcClientHandler(RpcClient)
+             */
             push(rpcPushRetryTask);
             notifyClientCount++;
         }
         Loggers.REMOTE_PUSH.info("push [{}] clients ,groupKey=[{}]", notifyClientCount, groupKey);
     }
-    
+
+    /**
+     * 监听LocalDataChangeEvent事件
+     * @param event {@link Event}
+     */
     @Override
     public void onEvent(LocalDataChangeEvent event) {
         String groupKey = event.groupKey;
@@ -131,7 +147,7 @@ public class RpcConfigChangeNotifier extends Subscriber<LocalDataChangeEvent> {
         String group = strings[1];
         String tenant = strings.length > 2 ? strings[2] : "";
         String tag = event.tag;
-        
+        // 配置修改变更
         configDataChanged(groupKey, dataId, group, tenant, isBeta, betaIps, tag);
         
     }
@@ -174,6 +190,9 @@ public class RpcConfigChangeNotifier extends Subscriber<LocalDataChangeEvent> {
             if (!tpsMonitorManager.applyTpsForClientIp(POINT_CONFIG_PUSH, connectionId, clientIp)) {
                 push(this);
             } else {
+                /**
+                 * 通过rpc发送请求
+                 */
                 rpcPushService.pushWithCallback(connectionId, notifyRequest, new AbstractPushCallBack(3000L) {
                     @Override
                     public void onSuccess() {
@@ -204,6 +223,10 @@ public class RpcConfigChangeNotifier extends Subscriber<LocalDataChangeEvent> {
             connectionManager.unregister(retryTask.connectionId);
         } else if (connectionManager.getConnection(retryTask.connectionId) != null) {
             // first time :delay 0s; sencond time:delay 2s  ;third time :delay 4s
+            /**
+             * 线程池执行: 实际上调用当前任务的run方法
+             * @see RpcPushTask#run()
+             */
             ConfigExecutor.getClientConfigNotifierServiceExecutor()
                     .schedule(retryTask, retryTask.tryTimes * 2, TimeUnit.SECONDS);
         } else {

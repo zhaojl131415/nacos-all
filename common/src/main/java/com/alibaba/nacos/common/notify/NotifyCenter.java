@@ -37,6 +37,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import static com.alibaba.nacos.api.exception.NacosException.SERVER_ERROR;
 
 /**
+ * 统一事件通知中心
  * Unified Event Notify Center.
  *
  * @author <a href="mailto:liaochuntao@live.com">liaochuntao</a>
@@ -285,6 +286,7 @@ public class NotifyCenter {
     }
     
     /**
+     * 发布事件: 事件驱动模型核心
      * Request publisher publish event Publishers load lazily, calling publisher.
      *
      * @param eventType class Instances type of the event type.
@@ -294,11 +296,15 @@ public class NotifyCenter {
         if (ClassUtils.isAssignableFrom(SlowEvent.class, eventType)) {
             return INSTANCE.sharePublisher.publish(event);
         }
-        
+
         final String topic = ClassUtils.getCanonicalName(eventType);
-        
+        // 根据事件类型获取事件发布者
         EventPublisher publisher = INSTANCE.publisherMap.get(topic);
         if (publisher != null) {
+            /**
+             * 发布事件
+             * @see DefaultPublisher#publish(Event)
+             */
             return publisher.publish(event);
         }
         LOGGER.warn("There are no [{}] publishers for this event, please register", topic);

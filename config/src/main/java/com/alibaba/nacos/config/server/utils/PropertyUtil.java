@@ -243,6 +243,7 @@ public class PropertyUtil implements ApplicationContextInitializer<ConfigurableA
     // if use raft+derby, Reduce leader read pressure
     
     public static boolean isDirectRead() {
+        // 是否单节点启动(非集群启动) && 配置的存储方式是内嵌的还是外置的, 外置的数据源mysql: false
         return EnvUtil.getStandaloneMode() && isEmbeddedStorage();
     }
     

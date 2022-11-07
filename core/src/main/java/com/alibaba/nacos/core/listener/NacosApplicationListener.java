@@ -21,6 +21,7 @@ import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.core.env.ConfigurableEnvironment;
 
 /**
+ * Nacos应用监听器, 执行初始化流程
  * Nacos Application Listener, execute init process.
  *
  * @author horizonzy

@@ -181,6 +181,7 @@ public final class ClassUtils {
     }
     
     /**
+     * 获取并返回基础类的规范名称。
      * Gets and returns the canonical name of the underlying class.
      *
      * @param cls Instances of the class represent classes and interfaces.

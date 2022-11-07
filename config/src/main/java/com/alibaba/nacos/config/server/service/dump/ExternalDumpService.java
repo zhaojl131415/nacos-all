@@ -17,6 +17,7 @@
 package com.alibaba.nacos.config.server.service.dump;
 
 import com.alibaba.nacos.config.server.configuration.ConditionOnExternalStorage;
+import com.alibaba.nacos.config.server.remote.RpcConfigChangeNotifier;
 import com.alibaba.nacos.config.server.service.repository.PersistService;
 import com.alibaba.nacos.core.cluster.ServerMemberManager;
 import org.springframework.context.annotation.Conditional;
@@ -29,6 +30,9 @@ import javax.annotation.PostConstruct;
  * External dump service.
  *
  * @author <a href="mailto:liaochuntao@live.com">liaochuntao</a>
+ *
+ * rpcConfigChangeNotifier:
+ * @see RpcConfigChangeNotifier
  */
 @Conditional(ConditionOnExternalStorage.class)
 @Component

@@ -38,6 +38,7 @@ import com.alibaba.nacos.api.remote.RemoteConstants;
 import com.alibaba.nacos.api.remote.request.Request;
 import com.alibaba.nacos.api.remote.request.RequestMeta;
 import com.alibaba.nacos.api.remote.response.Response;
+import com.alibaba.nacos.client.config.NacosConfigService;
 import com.alibaba.nacos.plugin.auth.api.RequestResource;
 import com.alibaba.nacos.client.config.common.GroupKey;
 import com.alibaba.nacos.client.config.filter.impl.ConfigFilterChainManager;
@@ -291,6 +292,9 @@ public class ClientWorker implements Closeable {
      */
     public boolean publishConfig(String dataId, String group, String tenant, String appName, String tag, String betaIps,
             String content, String encryptedDataKey, String casMd5, String type) throws NacosException {
+        /**
+         * @see ConfigRpcTransportClient#publishConfig(String, String, String, String, String, String, String, String, String, String)
+         */
         return agent
                 .publishConfig(dataId, group, tenant, appName, tag, betaIps, content, encryptedDataKey, casMd5, type);
     }
@@ -425,6 +429,10 @@ public class ClientWorker implements Closeable {
                     return t;
                 });
         agent.setExecutor(executorService);
+        /**
+         * 启动执行配置修改的延时任务轮询
+         * @see ConfigTransportClient#start()
+         */
         agent.start();
         
     }
@@ -438,9 +446,13 @@ public class ClientWorker implements Closeable {
     
     private void refreshContentAndCheck(CacheData cacheData, boolean notify) {
         try {
+            /**
+             * 核心: 远程rpc调用获取服务配置
+             */
             ConfigResponse response = getServerConfig(cacheData.dataId, cacheData.group, cacheData.tenant, 3000L,
                     notify);
             cacheData.setEncryptedDataKey(response.getEncryptedDataKey());
+            // 获取响应配置, 存入缓存
             cacheData.setContent(response.getContent());
             if (null != response.getConfigType()) {
                 cacheData.setType(response.getConfigType());
@@ -528,7 +540,10 @@ public class ClientWorker implements Closeable {
     }
     
     public class ConfigRpcTransportClient extends ConfigTransportClient {
-        
+
+        /**
+         * 阻塞队列
+         */
         private final BlockingQueue<Object> listenExecutebell = new ArrayBlockingQueue<>(1);
         
         private Object bellItem = new Object();
@@ -599,20 +614,24 @@ public class ClientWorker implements Closeable {
              * Register Config Change /Config ReSync Handler
              */
             rpcClientInner.registerServerRequestHandler((request) -> {
+                // 当请求为配置修改通知请求
                 if (request instanceof ConfigChangeNotifyRequest) {
                     ConfigChangeNotifyRequest configChangeNotifyRequest = (ConfigChangeNotifyRequest) request;
                     LOGGER.info("[{}] [server-push] config changed. dataId={}, group={},tenant={}",
                             rpcClientInner.getName(), configChangeNotifyRequest.getDataId(),
                             configChangeNotifyRequest.getGroup(), configChangeNotifyRequest.getTenant());
+                    // 根据dataId, group, tenant获取groupKey
                     String groupKey = GroupKey
                             .getKeyTenant(configChangeNotifyRequest.getDataId(), configChangeNotifyRequest.getGroup(),
                                     configChangeNotifyRequest.getTenant());
-                    
+                    // 根据groupKey获取缓存数据
                     CacheData cacheData = cacheMap.get().get(groupKey);
                     if (cacheData != null) {
                         synchronized (cacheData) {
+                            // 更新最后修改时间
                             cacheData.getLastModifiedTs().set(System.currentTimeMillis());
                             cacheData.setSyncWithServer(false);
+                            // 核心代码: 通知监听修改配置
                             notifyListenConfig();
                         }
                         
@@ -690,16 +709,28 @@ public class ClientWorker implements Closeable {
                 }
             });
         }
-        
+
+        /**
+         * 利用定时线程池执行延时任务, while + 阻塞队列实现了轮询
+         */
         @Override
         public void startInternal() {
+            // 延时任务
             executor.schedule(() -> {
+                // 当线程池没有关闭且没有终止, 则一直循环
                 while (!executor.isShutdown() && !executor.isTerminated()) {
                     try {
+                        /**
+                         * 从阻塞队列中取出元素
+                         * 超时5s, 如果阻塞队列有元素立马执行, 无元素则等待5s, 5s后再执行
+                         */
                         listenExecutebell.poll(5L, TimeUnit.SECONDS);
                         if (executor.isShutdown() || executor.isTerminated()) {
                             continue;
                         }
+                        /**
+                         * 核心代码: 执行配置修改
+                         */
                         executeConfigListen();
                     } catch (Exception e) {
                         LOGGER.error("[ rpc listen execute ] [rpc listen] exception", e);
@@ -716,9 +747,13 @@ public class ClientWorker implements Closeable {
         
         @Override
         public void notifyListenConfig() {
+            // 放入阻塞队列
             listenExecutebell.offer(bellItem);
         }
-        
+
+        /**
+         * 执行配置修改
+         */
         @Override
         public void executeConfigListen() {
             
@@ -732,6 +767,7 @@ public class ClientWorker implements Closeable {
                     
                     //check local listeners consistent.
                     if (cache.isSyncWithServer()) {
+                        // 检查md5
                         cache.checkListenerMd5();
                         if (!needAllSync) {
                             continue;
@@ -797,6 +833,10 @@ public class ClientWorker implements Closeable {
                                                     changeConfig.getTenant());
                                     changeKeys.add(changeKey);
                                     boolean isInitializing = cacheMap.get().get(changeKey).isInitializing();
+                                    /**
+                                     * 获取服务配置, 并更新缓存
+                                     * 底层核心: 实现方法同{@link NacosConfigService#getConfig(String, String, long)}一样, 通过远程rpc调用获取服务配置
+                                     */
                                     refreshContentAndCheck(changeKey, !isInitializing);
                                 }
                                 
@@ -954,14 +994,16 @@ public class ClientWorker implements Closeable {
                 }
             }
             /**
-             * 底层RPC调用, 调用方:
+             * 底层RPC调用:
+             * 简单方法查找被调用实现类, 可通过请求名搜索, 例如此请求为: ConfigQueryRequest, 找到对应实现: ConfigQueryRequestHandler
+             * 所以调用方为:
              * @see com.alibaba.nacos.config.server.remote.ConfigQueryRequestHandler#handle(ConfigQueryRequest, RequestMeta)
              */
             ConfigQueryResponse response = (ConfigQueryResponse) requestProxy(rpcClient, request, readTimeouts);
             
             ConfigResponse configResponse = new ConfigResponse();
             if (response.isSuccess()) {
-                // 将响应结果保存到快照中, 文件写入
+                // 将响应结果保存到快照中, 写入本地文件快照
                 LocalConfigInfoProcessor.saveSnapshot(this.getName(), dataId, group, tenant, response.getContent());
                 configResponse.setContent(response.getContent());
                 String configType;
@@ -1016,6 +1058,10 @@ public class ClientWorker implements Closeable {
                 throw new NacosException(NacosException.CLIENT_OVER_THRESHOLD,
                         "More than client-side current limit threshold");
             }
+            /**
+             * 底层RPC调用, 调用方:
+             * @see com.alibaba.nacos.config.server.remote.ConfigQueryRequestHandler#handle(ConfigQueryRequest, RequestMeta)
+             */
             return rpcClientInner.request(request, timeoutMills);
         }
         
@@ -1058,6 +1104,10 @@ public class ClientWorker implements Closeable {
                 request.putAdditionalParam(BETAIPS_PARAM, betaIps);
                 request.putAdditionalParam(TYPE_PARAM, type);
                 request.putAdditionalParam(ENCRYPTED_DATA_KEY_PARAM, encryptedDataKey == null ? "" : encryptedDataKey);
+                /**
+                 * 底层RPC调用, 调用方:
+                 * @see com.alibaba.nacos.config.server.remote.ConfigPublishRequestHandler#handle(ConfigPublishRequest, RequestMeta)
+                 */
                 ConfigPublishResponse response = (ConfigPublishResponse) requestProxy(getOneRunningClient(), request);
                 if (!response.isSuccess()) {
                     LOGGER.warn("[{}] [publish-single] fail, dataId={}, group={}, tenant={}, code={}, msg={}",

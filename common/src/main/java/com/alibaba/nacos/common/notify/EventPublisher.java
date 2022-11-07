@@ -20,6 +20,7 @@ import com.alibaba.nacos.common.lifecycle.Closeable;
 import com.alibaba.nacos.common.notify.listener.Subscriber;
 
 /**
+ * 事件发布器
  * Event publisher.
  *
  * @author <a href="mailto:liaochuntao@live.com">liaochuntao</a>
@@ -28,6 +29,7 @@ import com.alibaba.nacos.common.notify.listener.Subscriber;
 public interface EventPublisher extends Closeable {
     
     /**
+     * 初始化事件发布器
      * Initializes the event publisher.
      *
      * @param type       {@link Event >}
@@ -43,6 +45,7 @@ public interface EventPublisher extends Closeable {
     long currentEventSize();
     
     /**
+     * 添加订阅者/监听器
      * Add listener.
      *
      * @param subscriber {@link Subscriber}
@@ -50,6 +53,7 @@ public interface EventPublisher extends Closeable {
     void addSubscriber(Subscriber subscriber);
     
     /**
+     * 移除订阅者/监听器
      * Remove listener.
      *
      * @param subscriber {@link Subscriber}
@@ -57,6 +61,7 @@ public interface EventPublisher extends Closeable {
     void removeSubscriber(Subscriber subscriber);
     
     /**
+     * 发布事件
      * publish event.
      *
      * @param event {@link Event}
@@ -65,6 +70,7 @@ public interface EventPublisher extends Closeable {
     boolean publish(Event event);
     
     /**
+     * 通知订阅者/监听器
      * Notify listener.
      *
      * @param subscriber {@link Subscriber}

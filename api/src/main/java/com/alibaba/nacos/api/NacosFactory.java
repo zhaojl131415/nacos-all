@@ -34,6 +34,8 @@ import java.util.Properties;
 public class NacosFactory {
     
     /**
+     * 创建Nacos配置中心服务
+     *
      * Create config service.
      *
      * @param properties init param

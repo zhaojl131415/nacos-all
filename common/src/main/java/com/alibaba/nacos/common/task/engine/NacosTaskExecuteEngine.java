@@ -23,6 +23,7 @@ import com.alibaba.nacos.common.task.NacosTaskProcessor;
 import java.util.Collection;
 
 /**
+ * Nacos任务执行引擎
  * Nacos task execute engine.
  *
  * @author xiweng.yy
@@ -98,6 +99,7 @@ public interface NacosTaskExecuteEngine<T extends NacosTask> extends Closeable {
     T removeTask(Object key);
     
     /**
+     * 获取所有任务
      * Get all task keys.
      *
      * @return collection of task keys.

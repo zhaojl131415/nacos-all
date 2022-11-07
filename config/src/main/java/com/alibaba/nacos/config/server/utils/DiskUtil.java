@@ -55,7 +55,9 @@ public class DiskUtil {
      * Save configuration information to disk.
      */
     public static void saveToDisk(String dataId, String group, String tenant, String content) throws IOException {
+        // 获取服务器磁盘对应的缓存配置文件路径
         File targetFile = targetFile(dataId, group, tenant);
+        // 将内容写入配置文件
         FileUtils.writeStringToFile(targetFile, content, Constants.ENCODE);
     }
     
@@ -102,6 +104,7 @@ public class DiskUtil {
     }
     
     /**
+     * 获取服务器磁盘对应的缓存配置文件路径
      * Returns the path of the server cache file.
      */
     public static File targetFile(String dataId, String group, String tenant) {
@@ -177,6 +180,7 @@ public class DiskUtil {
     }
     
     /**
+     * 清除所有配置文件
      * Clear all config file.
      */
     public static void clearAll() {

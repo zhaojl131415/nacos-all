@@ -90,7 +90,7 @@ public class AsyncNotifyService {
         // Register ConfigDataChangeEvent to NotifyCenter.
         NotifyCenter.registerToPublisher(ConfigDataChangeEvent.class, NotifyCenter.ringBufferSize);
         
-        // Register A Subscriber to subscribe ConfigDataChangeEvent.
+        // Register A Subscriber to subscribe ConfigDataChangeEvent. 注册一个订阅ConfigDataChangeEvent事件的订阅/监听器
         NotifyCenter.registerSubscriber(new Subscriber() {
             
             @Override
@@ -108,7 +108,7 @@ public class AsyncNotifyService {
                     // In fact, any type of queue here can be
                     Queue<NotifySingleTask> httpQueue = new LinkedList<>();
                     Queue<NotifySingleRpcTask> rpcQueue = new LinkedList<>();
-                    
+                    // 遍历成员: 集群环境
                     for (Member member : ipList) {
                         if (!MemberUtil.isSupportedLongCon(member)) {
                             httpQueue.add(new NotifySingleTask(dataId, group, tenant, tag, dumpTs, member.getAddress(),
@@ -122,6 +122,9 @@ public class AsyncNotifyService {
                         ConfigExecutor.executeAsyncNotify(new AsyncTask(nacosAsyncRestTemplate, httpQueue));
                     }
                     if (!rpcQueue.isEmpty()) {
+                        /**
+                         * @see AsyncRpcTask#run()
+                         */
                         ConfigExecutor.executeAsyncNotify(new AsyncRpcTask(rpcQueue));
                     }
                     
@@ -184,7 +187,11 @@ public class AsyncNotifyService {
     class AsyncRpcTask implements Runnable {
         
         private Queue<NotifySingleRpcTask> queue;
-        
+
+        /**
+         *
+         * @param queue {@link NotifySingleRpcTask}
+         */
         public AsyncRpcTask(Queue<NotifySingleRpcTask> queue) {
             this.queue = queue;
         }
@@ -202,6 +209,7 @@ public class AsyncNotifyService {
                 syncRequest.setTag(task.tag);
                 syncRequest.setTenant(task.getTenant());
                 Member member = task.member;
+                // 如果当前成员为自己本身时, 直接执行dump
                 if (memberManager.getSelf().equals(member)) {
                     if (syncRequest.isBeta()) {
                         dumpService.dump(syncRequest.getDataId(), syncRequest.getGroup(), syncRequest.getTenant(),
@@ -212,7 +220,7 @@ public class AsyncNotifyService {
                     }
                     continue;
                 }
-                
+                // 非自身, 判断是否为成员
                 if (memberManager.hasMember(member.getAddress())) {
                     // start the health check and there are ips that are not monitored, put them directly in the notification queue, otherwise notify
                     boolean unHealthNeedDelay = memberManager.isUnHealth(member.getAddress());
@@ -231,6 +239,7 @@ public class AsyncNotifyService {
                                             task.getLastModified(), member.getAddress(), task.isBeta));
                         } else {
                             try {
+                                // 配置集群同步, 同步配置变更到其他成员
                                 configClusterRpcClientProxy
                                         .syncConfigChange(member, syncRequest, new AsyncRpcNotifyCallBack(task));
                             } catch (Exception e) {

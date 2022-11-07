@@ -18,10 +18,13 @@ package com.alibaba.nacos.core.remote;
 
 import com.alibaba.nacos.api.exception.NacosException;
 import com.alibaba.nacos.api.remote.AbstractRequestCallBack;
+import com.alibaba.nacos.api.remote.RequestCallBack;
+import com.alibaba.nacos.api.remote.request.Request;
 import com.alibaba.nacos.api.remote.request.ServerRequest;
 import com.alibaba.nacos.api.remote.PushCallBack;
 import com.alibaba.nacos.api.remote.response.Response;
 import com.alibaba.nacos.common.remote.exception.ConnectionAlreadyClosedException;
+import com.alibaba.nacos.core.remote.grpc.GrpcConnection;
 import com.alibaba.nacos.core.utils.Loggers;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -49,9 +52,15 @@ public class RpcPushService {
      */
     public void pushWithCallback(String connectionId, ServerRequest request, PushCallBack requestCallBack,
             Executor executor) {
+        /**
+         * 获取长连接: {@link GrpcConnection}
+         */
         Connection connection = connectionManager.getConnection(connectionId);
         if (connection != null) {
             try {
+                /**
+                 * @see GrpcConnection#asyncRequest(Request, RequestCallBack)
+                 */
                 connection.asyncRequest(request, new AbstractRequestCallBack(requestCallBack.getTimeout()) {
                     
                     @Override

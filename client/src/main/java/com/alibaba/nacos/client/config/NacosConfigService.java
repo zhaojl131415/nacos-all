@@ -18,6 +18,7 @@ package com.alibaba.nacos.client.config;
 
 import com.alibaba.nacos.api.PropertyKeyConst;
 import com.alibaba.nacos.api.common.Constants;
+import com.alibaba.nacos.api.config.ConfigFactory;
 import com.alibaba.nacos.api.config.ConfigService;
 import com.alibaba.nacos.api.config.ConfigType;
 import com.alibaba.nacos.api.config.listener.Listener;
@@ -42,9 +43,12 @@ import java.util.Arrays;
 import java.util.Properties;
 
 /**
+ * Nacos配置中心服务实现类
  * Config Impl.
  *
  * @author Nacos
+ *
+ * @see ConfigFactory#createConfigService(Properties)
  */
 @SuppressWarnings("PMD.ServiceOrDaoClassShouldEndWithImplRule")
 public class NacosConfigService implements ConfigService {
@@ -62,22 +66,32 @@ public class NacosConfigService implements ConfigService {
     ServerHttpAgent agent = null;
     
     /**
-     * long polling.
+     * long polling. 长轮询
      */
     private final ClientWorker worker;
     
     private String namespace;
     
     private final ConfigFilterChainManager configFilterChainManager;
-    
+
+    /**
+     * 通过
+     * @see ConfigFactory#createConfigService(Properties)
+     *
+     * @param properties
+     * @throws NacosException
+     */
     public NacosConfigService(Properties properties) throws NacosException {
         ValidatorUtils.checkInitParam(properties);
-        
+        // 初始化命名空间
         initNamespace(properties);
         this.configFilterChainManager = new ConfigFilterChainManager(properties);
         ServerListManager serverListManager = new ServerListManager(properties);
         serverListManager.start();
-        
+        /**
+         * 初始化客户端工作组:
+         * 启动执行配置修改的延时任务轮询
+         */
         this.worker = new ClientWorker(this.configFilterChainManager, serverListManager, properties);
         // will be deleted in 2.0 later versions
         agent = new ServerHttpAgent(serverListManager);
@@ -88,7 +102,15 @@ public class NacosConfigService implements ConfigService {
         namespace = ParamUtil.parseNamespace(properties);
         properties.put(PropertyKeyConst.NAMESPACE, namespace);
     }
-    
+
+    /**
+     * 获取配置信息
+     * @param dataId    dataId
+     * @param group     group
+     * @param timeoutMs read timeout
+     * @return
+     * @throws NacosException
+     */
     @Override
     public String getConfig(String dataId, String group, long timeoutMs) throws NacosException {
         return getConfigInner(namespace, dataId, group, timeoutMs);
@@ -113,12 +135,27 @@ public class NacosConfigService implements ConfigService {
         configFilterChainManager.doFilter(null, cr);
         return cr.getContent();
     }
-    
+
+    /**
+     * 添加监听器
+     * @param dataId   dataId
+     * @param group    group
+     * @param listener listener
+     * @throws NacosException
+     */
     @Override
     public void addListener(String dataId, String group, Listener listener) throws NacosException {
         worker.addTenantListeners(dataId, group, Arrays.asList(listener));
     }
-    
+
+    /**
+     * 发布配置
+     * @param dataId  dataId
+     * @param group   group
+     * @param content content
+     * @return
+     * @throws NacosException
+     */
     @Override
     public boolean publishConfig(String dataId, String group, String content) throws NacosException {
         return publishConfig(dataId, group, content, ConfigType.getDefaultType().getType());
@@ -140,18 +177,41 @@ public class NacosConfigService implements ConfigService {
             throws NacosException {
         return publishConfigInner(namespace, dataId, group, null, null, null, content, type, casMd5);
     }
-    
+
+    /**
+     * 删除配置
+     * @param dataId dataId
+     * @param group  group
+     * @return
+     * @throws NacosException
+     */
     @Override
     public boolean removeConfig(String dataId, String group) throws NacosException {
         return removeConfigInner(namespace, dataId, group, null);
     }
-    
+
+    /**
+     * 删除监听器
+     * @param dataId   dataId
+     * @param group    group
+     * @param listener listener
+     */
     @Override
     public void removeListener(String dataId, String group, Listener listener) {
         worker.removeTenantListener(dataId, group, listener);
     }
-    
+
+    /**
+     * 获取配置信息
+     * @param tenant
+     * @param dataId
+     * @param group
+     * @param timeoutMs
+     * @return
+     * @throws NacosException
+     */
     private String getConfigInner(String tenant, String dataId, String group, long timeoutMs) throws NacosException {
+        // 获取group
         group = blank2defaultGroup(group);
         ParamUtils.checkKeyParam(dataId, group);
         ConfigResponse cr = new ConfigResponse();
@@ -185,6 +245,7 @@ public class NacosConfigService implements ConfigService {
         try {
             /**
              * 远程调用, 获取配置信息
+             * @see ClientWorker#getServerConfig(String, String, String, long, boolean)
              */
             ConfigResponse response = worker.getServerConfig(dataId, group, tenant, timeoutMs, false);
             cr.setContent(response.getContent());
@@ -200,7 +261,7 @@ public class NacosConfigService implements ConfigService {
             LOGGER.warn("[{}] [get-config] get from server error, dataId={}, group={}, tenant={}, msg={}",
                     worker.getAgentName(), dataId, group, tenant, ioe.toString());
         }
-        // 容错, 获取本地快照
+        // 容错, 如果远程调用异常, 没有返回, 则获取本地快照
         content = LocalConfigInfoProcessor.getSnapshot(worker.getAgentName(), dataId, group, tenant);
         if (content != null) {
             LOGGER.warn("[{}] [get-config] get snapshot ok, dataId={}, group={}, tenant={}, config={}",

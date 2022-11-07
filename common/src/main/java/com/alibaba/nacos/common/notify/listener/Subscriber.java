@@ -62,11 +62,13 @@ public abstract class Subscriber<T extends Event> {
     }
     
     /**
+     * 事件的范围是否与当前订阅者匹配。默认实现是所有范围匹配。 如果覆盖该方法，最好覆盖相关的Event.scope()。
+     *
      * Whether the event's scope matches current subscriber. Default implementation is all scopes matched.
      * If you override this method, it better to override related {@link com.alibaba.nacos.common.notify.Event#scope()}.
      *
      * @param event {@link Event}
-     * @return Whether the event's scope matches current subscriber
+     * @return Whether the event's scope matches current subscriber 事件的范围是否与当前订户匹配
      */
     public boolean scopeMatches(T event) {
         return event.scope() == null;

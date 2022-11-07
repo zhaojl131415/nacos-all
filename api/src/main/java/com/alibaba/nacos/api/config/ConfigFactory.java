@@ -30,6 +30,9 @@ import java.util.Properties;
 public class ConfigFactory {
     
     /**
+     * 调用方: spring-cloud-starter-alibaba-nacos-config 自动装配
+     * @see com.alibaba.cloud.nacos.NacosConfigManager#createConfigService
+     *
      * Create Config.
      *
      * @param properties init param
@@ -40,6 +43,10 @@ public class ConfigFactory {
         try {
             Class<?> driverImplClass = Class.forName("com.alibaba.nacos.client.config.NacosConfigService");
             Constructor constructor = driverImplClass.getConstructor(Properties.class);
+            /**
+             * 通过反射调用{@code NacosConfigService}的构造方法, 用来创建NacosConfigService翠香
+             * @see com.alibaba.nacos.client.config.NacosConfigService#NacosConfigService(Properties)
+             */
             ConfigService vendorImpl = (ConfigService) constructor.newInstance(properties);
             return vendorImpl;
         } catch (Throwable e) {

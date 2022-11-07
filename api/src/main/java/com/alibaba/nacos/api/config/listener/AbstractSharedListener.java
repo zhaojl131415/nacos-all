@@ -37,6 +37,11 @@ public abstract class AbstractSharedListener implements Listener {
     
     @Override
     public final void receiveConfigInfo(String configInfo) {
+        /**
+         * 详见spring-cloud-starter-alibaba-nacos-config包源码:
+         * @see com.alibaba.cloud.nacos.refresh.NacosContextRefresher#registerNacosListener
+         * 上述方法中实现了当前监听器, 并重写了innerReceive()方法.
+         */
         innerReceive(dataId, group, configInfo);
     }
     

@@ -28,6 +28,8 @@ import com.alibaba.nacos.config.server.service.ConfigCacheService;
 import com.alibaba.nacos.config.server.service.SwitchService;
 import com.alibaba.nacos.config.server.service.dump.DumpService;
 import com.alibaba.nacos.config.server.service.repository.PersistService;
+import com.alibaba.nacos.config.server.service.repository.embedded.EmbeddedStoragePersistServiceImpl;
+import com.alibaba.nacos.config.server.service.repository.extrnal.ExternalStoragePersistServiceImpl;
 import com.alibaba.nacos.config.server.utils.GroupKey2;
 import com.alibaba.nacos.config.server.utils.LogUtil;
 
@@ -48,11 +50,18 @@ public class DumpAllProcessor implements NacosTaskProcessor {
     
     @Override
     public boolean process(NacosTask task) {
+        /**
+         * 获取配置表最大主键
+         * @see EmbeddedStoragePersistServiceImpl#findConfigMaxId()
+         * @see ExternalStoragePersistServiceImpl#findConfigMaxId()
+         */
         long currentMaxId = persistService.findConfigMaxId();
         long lastMaxId = 0;
+        // 分页读取配置表的数据, 每页1000条
         while (lastMaxId < currentMaxId) {
             Page<ConfigInfoWrapper> page = persistService.findAllConfigInfoFragment(lastMaxId, PAGE_SIZE);
             if (page != null && page.getPageItems() != null && !page.getPageItems().isEmpty()) {
+                // 遍历配置数据
                 for (ConfigInfoWrapper cf : page.getPageItems()) {
                     long id = cf.getId();
                     lastMaxId = Math.max(id, lastMaxId);
@@ -67,7 +76,7 @@ public class DumpAllProcessor implements NacosTaskProcessor {
                     if (cf.getDataId().equals(SwitchService.SWITCH_META_DATAID)) {
                         SwitchService.load(cf.getContent());
                     }
-    
+                    // 核心方法: 保存配置文件到本地并在缓存中更新md5值。
                     ConfigCacheService.dump(cf.getDataId(), cf.getGroup(), cf.getTenant(), cf.getContent(),
                             cf.getLastModified(), cf.getType(), cf.getEncryptedDataKey());
                     

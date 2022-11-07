@@ -36,12 +36,15 @@ import com.alibaba.nacos.common.utils.StringUtils;
 import com.alibaba.nacos.common.utils.VersionUtils;
 import com.alibaba.nacos.core.monitor.MetricsMonitor;
 import com.alibaba.nacos.core.remote.event.ConnectionLimitRuleChangeEvent;
+import com.alibaba.nacos.core.remote.grpc.GrpcConnection;
 import com.alibaba.nacos.core.utils.Loggers;
 import com.alibaba.nacos.sys.env.EnvUtil;
 import com.alibaba.nacos.sys.file.FileChangeEvent;
 import com.alibaba.nacos.sys.file.FileWatcher;
 import com.alibaba.nacos.sys.file.WatchFileCenter;
 import com.alibaba.nacos.sys.utils.DiskUtils;
+import io.grpc.netty.shaded.io.netty.channel.Channel;
+import io.grpc.stub.StreamObserver;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -91,7 +94,10 @@ public class ConnectionManager extends Subscriber<ConnectionLimitRuleChangeEvent
     String redirectAddress = null;
     
     private Map<String, AtomicInteger> connectionForClientIp = new ConcurrentHashMap<>(16);
-    
+
+    /**
+     * 用于缓存连接<连接id, {@link GrpcConnection}>
+     */
     Map<String, Connection> connections = new ConcurrentHashMap<>();
     
     @Autowired
@@ -134,6 +140,7 @@ public class ConnectionManager extends Subscriber<ConnectionLimitRuleChangeEvent
     }
     
     /**
+     * 注册连接
      * register a new connect.
      *
      * @param connectionId connectionId
@@ -151,6 +158,7 @@ public class ConnectionManager extends Subscriber<ConnectionLimitRuleChangeEvent
             if (traced(connection.getMetaInfo().clientIp)) {
                 connection.setTraced(true);
             }
+            // put到缓存map中
             connections.put(connectionId, connection);
             connectionForClientIp.get(connection.getMetaInfo().clientIp).getAndIncrement();
             

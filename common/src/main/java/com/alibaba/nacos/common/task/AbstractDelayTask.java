@@ -40,6 +40,7 @@ public abstract class AbstractDelayTask implements NacosTask {
     protected static final long INTERVAL = 1000L;
     
     /**
+     * 合并任务
      * merge task.
      *
      * @param task task

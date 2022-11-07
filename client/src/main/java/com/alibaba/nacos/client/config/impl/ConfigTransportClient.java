@@ -132,6 +132,10 @@ public abstract class ConfigTransportClient {
         securityProxy.login(this.properties);
         this.executor.scheduleWithFixedDelay(() -> securityProxy.login(properties), 0,
                 this.securityInfoRefreshIntervalMills, TimeUnit.MILLISECONDS);
+        /**
+         * 启动执行配置修改的延时任务轮询
+         * @see ClientWorker.ConfigRpcTransportClient#startInternal()
+         */
         startInternal();
     }
     

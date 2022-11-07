@@ -71,7 +71,12 @@ import static com.alibaba.nacos.config.server.utils.LogUtil.DUMP_LOG;
 import static com.alibaba.nacos.config.server.utils.LogUtil.FATAL_LOG;
 
 /**
+ * 存储数据服务
  * Dump data service.
+ *
+ * 服务端启动时就会调用{@link DumpService#init()}方法: 因为DumpService为抽象类, 他的子类重写了init方法, 并添加了{@code @PostConstruct}
+ * 从数据库中load配置存储在本地磁盘上, 并将一些重要的元信息(MD5值)缓存在内存中.
+ * 服务端会根据心跳文件中保存的最后一次心跳时间(6小时内), 来判断到底是从数据库dump全量or增量配置数据.
  *
  * @author Nacos
  */
@@ -163,7 +168,15 @@ public abstract class DumpService {
      * @throws Throwable throws Exception when actually operate.
      */
     protected abstract void init() throws Throwable;
-    
+
+    /**
+     * 执行dump转存到本地文件
+     * @param processor
+     * @param dumpAllProcessor
+     * @param dumpAllBetaProcessor
+     * @param dumpAllTagProcessor
+     * @throws NacosException
+     */
     protected void dumpOperate(DumpProcessor processor, DumpAllProcessor dumpAllProcessor,
             DumpAllBetaProcessor dumpAllBetaProcessor, DumpAllTagProcessor dumpAllTagProcessor) throws NacosException {
         String dumpFileContext = "CONFIG_DUMP_TO_FILE";
@@ -192,6 +205,7 @@ public abstract class DumpService {
             };
             
             try {
+                // 核心方法
                 dumpConfigInfo(dumpAllProcessor);
                 
                 // update Beta cache
@@ -256,29 +270,42 @@ public abstract class DumpService {
         }
         
     }
-    
+
+    /**
+     * 转存配置信息
+     * @param dumpAllProcessor
+     * @throws IOException
+     */
     private void dumpConfigInfo(DumpAllProcessor dumpAllProcessor) throws IOException {
         int timeStep = 6;
+        // 是否全量更新: 默认全量更新
         boolean isAllDump = true;
         // initial dump all
         FileInputStream fis = null;
         Timestamp heartheatLastStamp = null;
         try {
             if (isQuickStart()) {
+                // 获取心跳存储文件
                 File heartbeatFile = DiskUtil.heartBeatFile();
                 if (heartbeatFile.exists()) {
+                    // 读取心跳存储文件, 获取最后一次心跳时间
                     fis = new FileInputStream(heartbeatFile);
                     String heartheatTempLast = IoUtils.toString(fis, Constants.ENCODE);
                     heartheatLastStamp = Timestamp.valueOf(heartheatTempLast);
+                    // 如果当前时间戳 - 最后一次心跳时间 < 6小时, 设置是否全量更新为false
                     if (TimeUtils.getCurrentTime().getTime() - heartheatLastStamp.getTime()
                             < timeStep * 60 * 60 * 1000) {
                         isAllDump = false;
                     }
                 }
             }
+            // 是否全量更新
             if (isAllDump) {
+                // 全量更新
                 LogUtil.DEFAULT_LOG.info("start clear all config-info.");
+                // 清除所有配置文件
                 DiskUtil.clearAll();
+                // 执行全量更新配置
                 dumpAllProcessor.process(new DumpAllTask());
             } else {
                 Timestamp beforeTimeStamp = getBeforeStamp(heartheatLastStamp, timeStep);

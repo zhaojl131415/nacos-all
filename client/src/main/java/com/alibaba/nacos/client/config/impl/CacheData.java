@@ -327,6 +327,10 @@ public class CacheData {
                 configFilterChainManager.doFilter(null, cr);
                 String contentTmp = cr.getContent();
                 listenerWrap.inNotifying = true;
+                /**
+                 * 接收配置信息
+                 * @see AbstractSharedListener#receiveConfigInfo(String) 
+                 */
                 listener.receiveConfigInfo(contentTmp);
                 // compare lastContent and content
                 if (listener instanceof AbstractConfigChangeListener) {

@@ -32,7 +32,14 @@ public class GroupKey2 {
         urlEncode(group, sb);
         return sb.toString();
     }
-    
+
+    /**
+     * 生成groupKey
+     * @param dataId
+     * @param group
+     * @param tenant
+     * @return
+     */
     public static String getKey(String dataId, String group, String tenant) {
         StringBuilder sb = new StringBuilder();
         urlEncode(dataId, sb);

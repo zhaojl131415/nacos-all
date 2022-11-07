@@ -28,6 +28,8 @@ import com.alibaba.nacos.config.server.model.CacheItem;
 import com.alibaba.nacos.config.server.model.ConfigInfoBase;
 import com.alibaba.nacos.config.server.service.ConfigCacheService;
 import com.alibaba.nacos.config.server.service.repository.PersistService;
+import com.alibaba.nacos.config.server.service.repository.embedded.EmbeddedStoragePersistServiceImpl;
+import com.alibaba.nacos.config.server.service.repository.extrnal.ExternalStoragePersistServiceImpl;
 import com.alibaba.nacos.config.server.service.trace.ConfigTraceService;
 import com.alibaba.nacos.config.server.utils.DiskUtil;
 import com.alibaba.nacos.config.server.utils.GroupKey2;
@@ -114,6 +116,7 @@ public class ConfigQueryRequestHandler extends RequestHandler<ConfigQueryRequest
             try {
                 String md5 = Constants.NULL;
                 long lastModified = 0L;
+                // 获取CacheItem
                 CacheItem cacheItem = ConfigCacheService.getContentCache(groupKey);
                 if (cacheItem != null) {
                     if (cacheItem.isBeta()) {
@@ -157,9 +160,21 @@ public class ConfigQueryRequestHandler extends RequestHandler<ConfigQueryRequest
                         } else {
                             md5 = cacheItem.getMd5();
                             lastModified = cacheItem.getLastModifiedTs();
+                            // 是否直接读取: 配置的外置数据源mysql, 此处返回false
                             if (PropertyUtil.isDirectRead()) {
+                                /**
+                                 * 内嵌数据源:
+                                 * @see EmbeddedStoragePersistServiceImpl#findConfigInfo(String, String, String)
+                                 * 外置数据源:
+                                 * @see ExternalStoragePersistServiceImpl#findConfigInfo(String, String, String)
+                                 */
                                 configInfoBase = persistService.findConfigInfo(dataId, group, tenant);
                             } else {
+                                /**
+                                 * 直接读取文件:
+                                 * 因为在nacos作为服务端启动后, 会将配置文件持久化到本地磁盘上, 所以可以直接通过文件获取.
+                                 * nacos提供的服务端包目录 nacos/data/naming/data/ todo: 存疑???, 配置文件没找到
+                                 */
                                 file = DiskUtil.targetFile(dataId, group, tenant);
                             }
                             if (configInfoBase == null && fileNotExist(file)) {
@@ -211,17 +226,20 @@ public class ConfigQueryRequestHandler extends RequestHandler<ConfigQueryRequest
                 }
                 
                 response.setMd5(md5);
-                
+                /**
+                 * 对响应的content设置值, content对应配置的实际内容
+                 */
                 if (PropertyUtil.isDirectRead()) {
                     response.setLastModified(lastModified);
+                    // 获取配置内容
                     response.setContent(configInfoBase.getContent());
                     response.setEncryptedDataKey(configInfoBase.getEncryptedDataKey());
                     response.setResultCode(ResponseCode.SUCCESS.getCode());
-                    
                 } else {
                     //read from file
                     String content = null;
                     try {
+                        // 读取文件获取配置内容
                         content = readFileContent(file);
                         response.setContent(content);
                         response.setLastModified(lastModified);
