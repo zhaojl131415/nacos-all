@@ -660,7 +660,7 @@ public class ServiceManager implements RecordListener<Service> {
             instances.setInstanceList(instanceList);
 
             /**
-             * 当前service在头部注入时指定了名字, 根据名字找到对应的实现类为:
+             * 当前service在头部注入时指定了名字: consistencyDelegate, 根据名字找到对应的实现类为:
              * @see DelegateConsistencyServiceImpl#put(java.lang.String, com.alibaba.nacos.naming.pojo.Record)
              */
             consistencyService.put(key, instances);

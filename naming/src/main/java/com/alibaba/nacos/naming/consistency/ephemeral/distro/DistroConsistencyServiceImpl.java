@@ -105,6 +105,11 @@ public class DistroConsistencyServiceImpl implements EphemeralConsistencyService
     
     @PostConstruct
     public void init() {
+        // spring容器启动, 当前bean初始化后会调用此方法.
+        /**
+         * 全局线程池执行器执行线程,
+         * @see Notifier#run()
+         */
         GlobalExecutor.submitDistroNotifyTask(notifier);
     }
     
@@ -115,6 +120,7 @@ public class DistroConsistencyServiceImpl implements EphemeralConsistencyService
         if (ApplicationUtils.getBean(UpgradeJudgement.class).isUseGrpcFeatures()) {
             return;
         }
+        // Nacos集群架构, 注册到注册其他节点同步
         distroProtocol.sync(new DistroKey(key, KeyBuilder.INSTANCE_LIST_KEY_PREFIX), DataOperation.CHANGE,
                 DistroConfig.getInstance().getSyncDelayMillis());
     }
@@ -131,13 +137,20 @@ public class DistroConsistencyServiceImpl implements EphemeralConsistencyService
     }
     
     /**
+     * 先将服务实例的信息存入内存的Map中, 再向阻塞队列中添加一个任务, 会有全局线程池从阻塞队列中获取任务, 异步完成注册表的实例注册.
+     *
+     * 为什么不在这里直接将服务实例注册到注册表中, 而要通过队列异步的注册?
+     * 1. 为了提升服务注册的性能, 高并发, 如果是通过同步的方式, 性能不一定有这么高.
+     * 服务注册不一定要等所有的流程执行完, 只要将服务实例的信息放入队列中, 等线程池异步去执行就好了.
+     * 2. 还有各个微服务启动, 可能会引入很多中间件, 如果每个都同步去执行, 也会导致服务启动时间过长
+     *
      * Put a new record.
      *
      * @param key   key of record
      * @param value record
      */
     public void onPut(String key, Record value) {
-        
+        // 将服务key和实例对象列表构建成一个新对象存入dataStore这个内存的Map中
         if (KeyBuilder.matchEphemeralInstanceListKey(key)) {
             Datum<Instances> datum = new Datum<>();
             datum.value = (Instances) value;
@@ -149,7 +162,12 @@ public class DistroConsistencyServiceImpl implements EphemeralConsistencyService
         if (!listeners.containsKey(key)) {
             return;
         }
-        
+        /**
+         * 向队列添加新的通知任务。
+         *
+         * 会有全局线程池从阻塞队列中获取任务, 异步完成注册表的实例注册. 异步注册代码:
+         * @see Notifier#run()
+         */
         notifier.addTask(key, DataOperation.CHANGE);
     }
     
@@ -379,11 +397,12 @@ public class DistroConsistencyServiceImpl implements EphemeralConsistencyService
     public class Notifier implements Runnable {
         
         private ConcurrentHashMap<String, String> services = new ConcurrentHashMap<>(10 * 1024);
-        
+        /** 阻塞队列 */
         private BlockingQueue<Pair<String, DataOperation>> tasks = new ArrayBlockingQueue<>(1024 * 1024);
         
         /**
          * Add new notify task to queue.
+         * 向队列添加新的通知任务。
          *
          * @param datumKey data key
          * @param action   action for data
@@ -396,6 +415,7 @@ public class DistroConsistencyServiceImpl implements EphemeralConsistencyService
             if (action == DataOperation.CHANGE) {
                 services.put(datumKey, StringUtils.EMPTY);
             }
+            // 将服务key和事件类型封装对象, 存入内存队列, 会有其他线程从队列中获取数据执行
             tasks.offer(Pair.with(datumKey, action));
         }
         
@@ -406,10 +426,12 @@ public class DistroConsistencyServiceImpl implements EphemeralConsistencyService
         @Override
         public void run() {
             Loggers.DISTRO.info("distro notifier started");
-            
+            // 无限循环处理
             for (; ; ) {
                 try {
+                    // 从内存阻塞队列中获取由服务key和事件类型构件的对象
                     Pair<String, DataOperation> pair = tasks.take();
+                    // 处理由服务key和事件类型构件的对象
                     handle(pair);
                 } catch (Throwable e) {
                     Loggers.DISTRO.error("[NACOS-DISTRO] Error while handling notifying task", e);
@@ -419,6 +441,7 @@ public class DistroConsistencyServiceImpl implements EphemeralConsistencyService
         
         private void handle(Pair<String, DataOperation> pair) {
             try {
+                // 服务key
                 String datumKey = pair.getValue0();
                 DataOperation action = pair.getValue1();
                 
@@ -436,6 +459,11 @@ public class DistroConsistencyServiceImpl implements EphemeralConsistencyService
                     
                     try {
                         if (action == DataOperation.CHANGE) {
+                            /**
+                             * 通过服务key去注册表中获取服务实例列表
+                             *
+                             * @see Service#onChange(java.lang.String, com.alibaba.nacos.naming.core.Instances)
+                             */
                             listener.onChange(datumKey, dataStore.get(datumKey).value);
                             continue;
                         }

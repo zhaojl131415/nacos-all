@@ -59,10 +59,16 @@ public class Cluster extends com.alibaba.nacos.api.naming.pojo.Cluster implement
     
     @JsonIgnore
     private HealthCheckTask checkTask;
-    
+
+    /**
+     * 用于存储注册表持久化实例
+     */
     @JsonIgnore
     private Set<Instance> persistentInstances = new HashSet<>();
-    
+
+    /**
+     * 用于存储注册表临时实例
+     */
     @JsonIgnore
     private Set<Instance> ephemeralInstances = new HashSet<>();
     
@@ -236,7 +242,7 @@ public class Cluster extends com.alibaba.nacos.api.naming.pojo.Cluster implement
      * @param ephemeral whether these instances are ephemeral
      */
     public void updateIps(List<Instance> ips, boolean ephemeral) {
-        
+        // 判断是否为临时实例
         Set<Instance> toUpdateInstances = ephemeral ? ephemeralInstances : persistentInstances;
         
         HashMap<String, Instance> oldIpMap = new HashMap<>(toUpdateInstances.size());
@@ -294,8 +300,10 @@ public class Cluster extends com.alibaba.nacos.api.naming.pojo.Cluster implement
         }
         
         toUpdateInstances = new HashSet<>(ips);
-        
+
+        // 判断是否为临时的
         if (ephemeral) {
+            // 给注册表临时实例赋值
             ephemeralInstances = toUpdateInstances;
         } else {
             persistentInstances = toUpdateInstances;

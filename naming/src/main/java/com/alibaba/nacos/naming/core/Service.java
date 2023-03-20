@@ -178,14 +178,14 @@ public class Service extends com.alibaba.nacos.api.naming.pojo.Service implement
     public void onChange(String key, Instances value) throws Exception {
         
         Loggers.SRV_LOG.info("[NACOS-RAFT] datum is changed, key: {}, value: {}", key, value);
-        
+        // 遍历服务实例列表
         for (Instance instance : value.getInstanceList()) {
             
             if (instance == null) {
                 // Reject this abnormal instance list:
                 throw new RuntimeException("got null instance " + key);
             }
-            
+            // 权重
             if (instance.getWeight() > 10000.0D) {
                 instance.setWeight(10000.0D);
             }
@@ -194,7 +194,7 @@ public class Service extends com.alibaba.nacos.api.naming.pojo.Service implement
                 instance.setWeight(0.01D);
             }
         }
-        
+        // 更新Nacos注册表中的实例集合
         updateIPs(value.getInstanceList(), KeyBuilder.matchEphemeralInstanceListKey(key));
         
         recalculateChecksum();
@@ -229,6 +229,7 @@ public class Service extends com.alibaba.nacos.api.naming.pojo.Service implement
     }
     
     /**
+     * 更新实例集合
      * Update instances.
      *
      * @param instances instances
@@ -275,6 +276,9 @@ public class Service extends com.alibaba.nacos.api.naming.pojo.Service implement
         for (Map.Entry<String, List<Instance>> entry : ipMap.entrySet()) {
             //make every ip mine
             List<Instance> entryIPs = entry.getValue();
+            /**
+             * 更新注册表实例集合
+             */
             clusterMap.get(entry.getKey()).updateIps(entryIPs, ephemeral);
         }
         

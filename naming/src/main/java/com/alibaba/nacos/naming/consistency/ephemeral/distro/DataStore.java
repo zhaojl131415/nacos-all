@@ -34,7 +34,14 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 @Component
 public class DataStore {
-    
+
+    /**
+     * 数据仓库
+     * 这不是Nacos的注册表, 只是一个用于将实例信息缓存在内存的阻塞队列中, 通过全局线程池来消费阻塞队列, 异步完成注册表的写入
+     *
+     * key: 根据命名空间id和服务名构建的key
+     * value: 服务对应的实例集合
+     */
     private Map<String, Datum> dataMap = new ConcurrentHashMap<>(1024);
     
     public void put(String key, Datum value) {

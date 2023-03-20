@@ -191,6 +191,9 @@ public class GlobalExecutor {
     }
     
     public static void submitDistroNotifyTask(Runnable runnable) {
+        /**
+         *
+         */
         DISTRO_NOTIFY_EXECUTOR.submit(runnable);
     }
     
